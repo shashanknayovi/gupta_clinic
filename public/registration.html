@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gupta Clinic | Registration Desk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .navbar-custom { background: #0d6efd; color: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .dashboard-card { border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background: #ffffff; margin-bottom: 20px; }
+        .card-header-blue { background: #0d6efd; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .card-header-dark { background: #212529; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .queue-box { max-height: 480px; overflow-y: auto; }
+        .token-badge { font-size: 1.2rem; font-weight: bold; color: #0d6efd; background: #e7f1ff; padding: 4px 10px; border-radius: 6px; }
+        .status-badge { font-size: 0.85rem; padding: 4px 8px; border-radius: 20px; font-weight: 600; }
+        .status-waiting { background: #fff3cd; color: #856404; }
+        .status-completed { background: #d1e7dd; color: #0f5132; }
+
+        /* --- PRINT UTILITY STYLES (Saves Thermal Paper) --- */
+        #thermal-slip-print-area { display: none; }
+
+        @media print {
+            body * { display: none !important; }
+            #thermal-slip-print-area, #thermal-slip-print-area * { display: block !important; }
+            #thermal-slip-print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                padding: 5mm;
+                font-family: 'Courier New', Courier, monospace;
+                color: #000 !important;
+            }
+            .slip-hr { border-top: 1px dashed #000 !important; margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">🏥 GUPTA CLINIC | Front Counter System</h4>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-dark px-3 py-2 fs-6">Operator Station: Counter 1</span>
+            <button onclick="logoutCounter()" class="btn btn-danger btn-sm fw-bold px-3">Logout</button>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        <div class="row">
+            
+            <div class="col-md-5">
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-dark">
+                        🔍 Old Patient Re-visit Verification
+                    </div>
+                    <div class="card-body bg-light">
+                        <div class="input-group">
+                            <input type="text" id="find_phone" class="form-control" placeholder="Enter Mobile No to auto-fill">
+                            <button class="btn btn-dark" type="button" onclick="verifyPatientRecord()">Search Record</button>
+                        </div>
+                        <div id="search_feedback" class="form-text mt-2 fw-bold text-secondary"></div>
+                    </div>
+                </div>
+
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-blue">
+                        📝 Patient Token Generation Intake
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="patientForm" onsubmit="submitRegistration(event)">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Patient Full Name *</label>
+                                <input type="text" id="name" class="form-control" placeholder="Full Name" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Age *</label>
+                                    <input type="number" id="age" class="form-control" placeholder="Age" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Gender *</label>
+                                    <select id="gender" class="form-select" required>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Mobile Number *</label>
+                                <input type="text" id="phone" class="form-control" placeholder="10-digit number" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Assign OPD Consulting Doctor *</label>
+                                <select id="doctor_id" class="form-select" required>
+                                    <option value="" disabled selected>-- Choose Room Allocation --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Address</label>
+                                <textarea id="address" class="form-control" rows="2" placeholder="Address Details"></textarea>
+                            </div>
+
+                            <div class="d-grid gap-2 pt-2">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold">Generate Slip & Token</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFormEngine()">Reset Form</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+<div class="col-md-7">
+
+    <!-- Today's Online Appointments -->
+    <div class="card dashboard-card mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span>📅 Today's Online Appointments</span>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center" style="table-layout:fixed;">
+                    <thead class="table-light">
+                        <tr>
+                            <thead class="table-light">
+<tr class="text-center">
+    <th>App ID</th>
+    <th>Patient</th>
+    <th>Phone</th>
+    <th>Doctor</th>
+    <th>Status</th>
+    <th style="width:140px;">Action</th>
+</tr>
+</thead>
+                        </tr>
+                    </thead>
+                    <tbody id="onlineAppointmentsTable">
+                        <tr>
+                            <td colspan="7" class="text-center py-3 text-muted">
+                                Loading appointments...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+                <div class="card dashboard-card">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <span>📋 Today's Live OPD Registrations / Token Queue</span>
+                        <div class="d-flex align-items-center gap-3">
+                            <span id="liveCurrentDateDisplay" class="badge bg-primary px-3 py-2 fw-bold fs-7">
+                                Loading Date...
+                            </span>
+                            <button class="btn btn-light btn-sm fw-bold" id="btnSyncLive" onclick="loadLiveQueue()">Sync Live</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive queue-box">
+                            <table class="table table-hover align-middle mb-0">
+                               <thead class="table-secondary sticky-top text-center">
+<tr>
+    <th>Token</th>
+<th>Patient ID</th>
+<th>Name</th>
+<th>Mobile</th>
+
+<th>Doctor</th>
+<th>Status</th>
+<th>Cancel</th>
+</tr>
+</thead>
+                                <tbody id="live_queue_body">
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">Summary pipeline loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light text-end py-2">
+                        <span id="queue_counter_lbl" class="fw-bold text-dark text-uppercase small">Total Live Queue Count: 0</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="thermal-slip-print-area">
+        <div style="text-align: center;">
+            <h3 style="margin: 0; padding: 0;">GUPTA CLINIC</h3>
+            <small>Main Road Market, Near Railway Colony</small><br>
+            <small>Tel: +91 98765 XXXXX</small>
+        </div>
+        <div class="slip-hr"></div>
+        <div style="text-align: center; margin: 8px 0;">
+            <span style="font-size: 1.1rem; font-weight: bold;">OPD CONSULTATION SLIP</span>
+        </div>
+        <div class="slip-hr"></div>
+        <div>
+            <strong>Token No: </strong> <span id="print_token_no" style="font-size: 1.4rem; font-weight: bold;">#00</span><br>
+            <strong>Date/Time:</strong> <span id="print_date_time">--</span><br>
+            <strong>Patient ID:</strong> <span id="print_pid">--</span><br>
+            <strong>Name:      </strong> <span id="print_name">--</span><br>
+            <strong>Age/Gen:   </strong> <span id="print_age_gender">--</span><br>
+            <strong>Mobile:    </strong> <span id="print_phone">--</span>
+        </div>
+        <div class="slip-hr"></div>
+        <div style="margin-top: 5px;">
+            <strong>Assigned To:</strong><br>
+            <span id="print_doctor" style="font-size: 1.05rem; font-weight: bold;">--</span>
+        </div>
+        <div class="slip-hr"></div>
+        <div style="text-align: center; margin-top: 15px; font-size: 0.8rem;">
+            <p>Please wait for your token sequence.<br>Thank you!</p>
+        </div>
+    </div>
+
+    <script>
+        // Har 10 second mein queue update hogi
+setInterval(loadLiveQueue, 10000);
+        // DOM Loads trigger engine
+        document.addEventListener('DOMContentLoaded', () => {
+    initRegistrationClock();
+    loadLiveQueue();
+    loadOnlineAppointments();
+    loadActiveDoctors();
+});
+
+        // Live Clock Engine
+        function initRegistrationClock() {
+            const dateDisplay = document.getElementById('liveCurrentDateDisplay');
+            if (!dateDisplay) return;
+
+            function updateTime() {
+                const now = new Date();
+                const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                const formattedDate = now.toLocaleDateString('en-IN', options);
+                const formattedTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                dateDisplay.innerHTML = `Date: ${formattedDate} | ${formattedTime}`;
+            }
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        // 1. Live Summary Queue Grid Render Engine
+     // registration.html mein loadLiveQueue function ko aise badlein
+async function loadLiveQueue() {
+    try {
+        // Yahan se doctor_id ka filter hatayein taaki saare patients dikhein
+        const res = await fetch(`/api/registration/today-queue`); 
+        const data = await res.json();
+        const tbody = document.getElementById('live_queue_body');
+        const counter = document.getElementById('queue_counter_lbl');
+
+        if (data.success && data.queue && data.queue.length > 0) {
+            tbody.innerHTML = '';
+            counter.innerText = `Total Live Queue Count: ${data.queue.length}`;
+            
+            data.queue.forEach(p => {
+               
+                let badgeClass = p.status === 'Waiting' ? 'status-waiting' : 'status-completed';
+                tbody.innerHTML += `
+                        <tr class="text-center">
+                        <td class="ps-3"><span class="token-badge">#${String(p.queue_no).padStart(2, '0')}</span></td>
+                        <td class="fw-bold text-secondary">PID-${p.patient_id}</td>
+                        <td class="fw-semibold">${p.name}</td>
+                        <td>${p.phone || '--'}</td>
+       
+
+<td>
+   <span class="badge bg-primary">
+      ${p.doctor_display || 'Not Assigned'}
+   </span>
+</td>
+
+<td>
+   <span class="status-badge ${badgeClass}">
+      ${p.status}
+   </span>
+</td>
+
+<td>
+   ${p.status === 'Waiting'
+      ? `<button class="btn btn-sm btn-danger"
+            onclick="cancelAppointment(${p.app_id})">
+            Cancel
+         </button>`
+      : ''}
+</td>
+                        
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">No registrations found for today.</td></tr>`;
+            counter.innerText = "Total Live Queue Count: 0";
+        }
+    } catch (err) {
+        console.error("Queue loader crash:", err);
+    }
+}
+
+        // 2. Fetch Active Doctors dynamically from DB
+        async function loadActiveDoctors() {
+    const doctorDropdown = document.getElementById("doctor_id");
+    if (!doctorDropdown) return;
+    
+    try {
+        const response = await fetch('/api/get-active-doctors'); 
+        if (!response.ok) throw new Error("Database response error");
+        
+        const doctors = await response.json();
+
+        
+        doctorDropdown.innerHTML = '<option value="" disabled selected>-- Choose Room Allocation --</option>';
+        
+        if(!doctors || doctors.length === 0) {
+            doctorDropdown.innerHTML = '<option value="">No Doctors available</option>';
+            return;
+        }
+        
+        doctors.forEach(doc => {
+            const option = document.createElement("option");
+            option.value = doc.doctor_id;
+            
+            // Safety check for data display
+            const name = doc.staff_name ? doc.staff_name.trim() : "Unknown";
+            const room = doc.room_no ? doc.room_no : "N/A";
+            const spec = doc.specialization ? doc.specialization : "General";
+            
+            // UPDATED LOGIC: Check agar naam pehle se "Dr." se start ho raha hai
+            const formattedName = name.toLowerCase().startsWith("dr.") ? name : `Dr. ${name}`;
+            
+            option.textContent = `${formattedName} (${spec} - Room: ${room})`;
+            doctorDropdown.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error("Error loading doctors:", error);
+        doctorDropdown.innerHTML = '<option value="">Error loading doctors list</option>';
+    }
+}
+
+        // 3. Re-visit Automatic Field Filler Pipeline
+        async function verifyPatientRecord() {
+            const phoneInput = document.getElementById('find_phone').value.trim();
+            const feedback = document.getElementById('search_feedback');
+            
+            if(phoneInput.length < 10) {
+                alert("Valid 10-digit mobile write kijiye!");
+                return;
+            }
+
+            feedback.className = "form-text mt-2 text-warning";
+            feedback.innerText = "Scanning database structure...";
+
+            try {
+                const res = await fetch(`/api/registration/search-patient?phone=${phoneInput}`);
+                const data = await res.json();
+
+                if(data.success && data.found) {
+                    feedback.className = "form-text mt-2 text-success";
+                    feedback.innerText = `🎉 Patient Found! (PID-${data.patient.patient_id}) - Auto Filled.`;
+                    
+                    document.getElementById('name').value = data.patient.name;
+                    document.getElementById('age').value = data.patient.age;
+                    document.getElementById('gender').value = data.patient.gender;
+                    document.getElementById('phone').value = data.patient.phone;
+                    document.getElementById('address').value = data.patient.address || '';
+                } else {
+                    feedback.className = "form-text mt-2 text-danger";
+                    feedback.innerText = "❌ No history found. Please fill complete new details below.";
+                }
+            } catch (err) {
+                feedback.innerText = "Error tracking profile.";
+            }
+        }
+
+        // 4. Form Submission & Print dialogue trigger
+       async function submitRegistration(event) {
+    event.preventDefault();
+    
+    // UI: Double click/submission rokne ke liye button disable karein
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Processing...";
+            const nameVal = document.getElementById('name').value;
+            const ageVal = document.getElementById('age').value;
+            const genderVal = document.getElementById('gender').value;
+            const phoneVal = document.getElementById('phone').value;
+            const docSelect = document.getElementById('doctor_id');
+            const doctorText = docSelect.options[docSelect.selectedIndex].text;
+
+
+    const payload = {
+        name: nameVal,
+        age: document.getElementById('age').value,
+        gender: document.getElementById('gender').value,
+        phone: phoneVal,
+        doctor_id: docSelect.value,
+        address: document.getElementById('address').value
+    };
+
+    try {
+        const res = await fetch('/api/register-patient', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            // Success flow
+            document.getElementById('print_token_no').innerText = `#${String(data.queueNo).padStart(2, '0')}`;
+            document.getElementById('print_pid').innerText = `PID-${data.patient_id}`;
+                    document.getElementById('print_name').innerText = nameVal.toUpperCase();
+                    document.getElementById('print_age_gender').innerText = `${ageVal} Yrs / ${genderVal}`;
+                    document.getElementById('print_phone').innerText = phoneVal;
+                    document.getElementById('print_doctor').innerText = doctorText;
+                    document.getElementById('print_date_time').innerText = new Date().toLocaleString('en-IN');
+            
+            clearFormEngine();
+            loadLiveQueue();
+            setTimeout(() => { window.print(); }, 500);
+        } else {
+            // DUPLICATE DETECTED: Yeh alert dikhayega agar backend se 400 error aaye
+            alert("Registration Blocked: " + data.error);
+        }
+    } catch (err) {
+        alert("Network error. Please try again.");
+    } finally {
+        // UI: Button wapas enable karein
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Generate Slip & Token";
+    }
+}
+
+        function clearFormEngine() {
+            document.getElementById('patientForm').reset();
+            document.getElementById('search_feedback').innerText = '';
+            document.getElementById('find_phone').value = '';
+        }
+
+        function logoutCounter() {
+            if (confirm("Session close karke logout karna chahte hain?")) {
+                window.location.href = '/index.html';
+            }
+        }
+ async function cancelAppointment(appointmentId) {
+
+    if (!confirm("Kya aap waqai is registration ko cancel karna chahte hain?")) return;
+
+    try {
+        const res = await fetch('/api/cancel-appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appointment_id: appointmentId })
+        });
+        
+        const data = await res.json();
+        
+console.log(data);
+        
+        if (data.success) {
+            alert("Registration Cancelled Successfully.");
+            loadLiveQueue(); // List ko update karne ke liye
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch (err) {
+        console.error("Cancel Error:", err);
+    }
+    
+}
+async function loadOnlineAppointments() {
+
+    try {
+
+        const res = await fetch('/api/online-appointments');
+        const data = await res.json();
+
+        const tbody = document.getElementById('onlineAppointmentsTable');
+
+        if (!tbody) return;
+
+        if (!data || data.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-3 text-muted">
+                        No online appointments found
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        data.forEach(a => {
+
+            tbody.innerHTML += `
+<tr>
+    <td>${a.app_id}</td>
+    <td>${a.name}</td>
+    <td>${a.phone}</td>
+    <td>${a.staff_name}</td>
+    <td>
+        <span class="badge bg-warning text-dark">Booked</span>
+    </td>
+    <td>
+        <button class="btn btn-danger btn-sm"
+            onclick="cancelAppointment(${a.app_id})">
+            Cancel
+        </button>
+    </td>
+</tr>
+`;
+
+        });
+
+    } catch(err) {
+
+        console.error('Online Appointment Load Error:', err);
+
+    }
+}
+    </script>
+</body>
+</html>

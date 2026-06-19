@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Control - Gupta Clinic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Header modified to hold the logout button cleanly */
+        .admin-header { 
+            background: #c0392b; 
+            color: white; 
+            padding: 20px; 
+            border-radius: 0 0 20px 20px; 
+            position: relative;
+        }
+        .section-card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .logout-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container">
+        <div class="admin-header shadow mb-4 text-center">
+            <h1>Gupta Clinic Admin Backend</h1>
+            <p class="mb-0">System Control & User Access Management</p>
+            <button class="btn btn-light text-danger logout-btn shadow-sm" onclick="logout()">🚪 Logout</button>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card section-card">
+                    <div class="card-header bg-success text-white">Add New Staff Member</div>
+                    <div class="card-body">
+                        <form id="createUserForm" class="row g-3" onsubmit="createNewUser(event)">
+                            <div class="col-md-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="staffName" class="form-control" placeholder="e.g. Nurse Sunita" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Username</label>
+                                <input type="text" id="newUsername" class="form-control" placeholder="e.g. nurse_01" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" id="newPassword" class="form-control" placeholder="Set Password" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Role</label>
+                                <select class="form-select" id="newRoleSelect">
+                                    <option value="1">Admin</option>
+                                    <option value="2">Doctor</option>
+                                    <option value="3">Pharmacy</option>
+                                    <option value="4">Registration</option>
+                                    <option value="5">Nursing</option>
+                                    <option value="6">Billing</option>
+                                    <option value="7">Medical Officer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2" id="specializationWrapper" style="display: none;">
+    <label class="form-label">Specialization</label>
+    <select class="form-select" id="doctorSpecialization">
+        <option value="">-- Select Specialization --</option>
+        <option value="General Physician">General Physician</option>
+        <option value="Pediatrician">Pediatrician</option>
+        <option value="Cardiologist">Cardiologist</option>
+        <option value="Dermatologist">Dermatologist</option>
+    </select>
+</div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">Create</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card section-card h-100">
+                    <div class="card-header bg-dark text-white">Locked Login IDs</div>
+                    <div class="card-body">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Staff Name</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lockedUsersTable">
+                                <tr>
+                                    <td class="text-danger fw-bold">pharm_desk_2</td>
+                                    <td>Vishal Kumar</td>
+                                    <td><button class="btn btn-sm btn-outline-success" onclick="unlockUser(5)">🔓 Unlock Account</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card section-card h-100">
+                    <div class="card-header bg-dark text-white">Module Mapping (Role Management)</div>
+                    <div class="card-body">
+                        <form id="roleMappingForm">
+                            <div class="mb-3">
+                                <label class="form-label">Select User</label>
+                                <select class="form-select" id="userSelect">
+                                    <option value="1">Shashank Gupta</option>
+                                    <option value="2">Dr. Amit Gupta</option>
+                                    <option value="3">Rahul Sharma</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Map New Role</label>
+                                <select class="form-select" id="roleSelect">
+                                    <option value="1">Admin</option>
+                                    <option value="2">Doctor</option>
+                                    <option value="3">Pharmacy</option>
+                                    <option value="4">Registration</option>
+                                    <option value="5">Nursing</option>
+                                    <option value="6">Billing</option>
+                                    <option value="7">Medical Officer</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-danger w-100" onclick="updateRole()">Update Access Rights</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dropdowns ko pakadte hain
+const roleSelect = document.getElementById('newRoleSelect');
+const specializationWrapper = document.getElementById('specializationWrapper');
+const specializationSelect = document.getElementById('doctorSpecialization');
+
+// Event listener jo check karega ki kya select kiya gaya hai
+roleSelect.addEventListener('change', function() {
+    const selectedRole = parseInt(this.value);
+
+    // Agar Role = 2 (Doctor) ya Role = 7 (Medical Officer) hai
+    if (selectedRole === 2 || selectedRole === 7) {
+        specializationWrapper.style.display = 'block'; // Field dikhao
+        specializationSelect.required = true;         // Required compulsory karo
+    } else {
+        specializationWrapper.style.display = 'none';  // Field chupao
+        specializationSelect.required = false;        // Required hatao
+        specializationSelect.value = "";              // Value reset karo
+    }
+});
+        const BASE_URL = 'http://localhost:3000'; 
+
+        // --- LOGOUT FEATURE FUNCTION ---
+        function logout() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert("Logging out from Admin Session...");
+            window.location.href = 'index.html'; 
+        }
+
+        // 1. Function to Create New User Profile (FIXED VARIABLES)
+        async function createNewUser(event) {
+            if (event) event.preventDefault(); // Page ko reload hone se rokega
+
+            const nameValue = document.getElementById('staffName').value.trim();
+
+            // 🔥 CHANGE: Keys ko camelCase kar diya hai jo aapka backend expect kar raha hai
+            const userData = {
+    staffName: nameValue, 
+    username: document.getElementById('newUsername').value.trim(),
+    password: document.getElementById('newPassword').value.trim(),
+    roleId: parseInt(document.getElementById('newRoleSelect').value),
+    // Agar doctor select hai toh wahan ki value bhejega, nahi toh null
+    specialization: (parseInt(roleSelect.value) === 2 || parseInt(roleSelect.value) === 7) ? specializationSelect.value : null
+};
+
+            if(!userData.username || !userData.password || !userData.staffName) {
+                return alert("All fields are required!");
+            }
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/create-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                const result = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert("User Created Successfully with designated Role!");
+                    document.getElementById('createUserForm').reset();
+                    location.reload();
+                } else {
+                    // Backend se aane wali exact error dikhayega
+                    alert("Backend Error: " + (result.error || result.message || "Query structure constraint violation."));
+                }
+            } catch (error) {
+                console.error("Pipeline Error:", error);
+                alert("Database server down ya unreachable hai. Check terminal!");
+            }
+        }
+
+        // 2. Unlock Account Control Pipeline
+        async function unlockUser(userId) {
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/reset-user/${userId}`, { method: 'PUT' });
+                if (res.ok) {
+                    alert("Account Unlocked Successfully");
+                    location.reload(); 
+                } else {
+                    alert("Unlock script processing rejected by backend.");
+                }
+            } catch (error) {
+                alert("Server pipeline offline.");
+            }
+        }
+
+        // 3. System Module Matrix Role Mapping Update Function
+        async function updateRole() {
+            const userId = parseInt(document.getElementById('userSelect').value);
+            const roleId = parseInt(document.getElementById('roleSelect').value);
+            
+            try {
+                const res = await fetch(`${BASE_URL}/api/admin/update-role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, roleId })
+                });
+                if (res.ok) {
+                    alert("Access matrix updated successfully!");
+                    location.reload();
+                } else {
+                    alert("Constraint mismatch error on access rights execution.");
+                }
+            } catch (error) {
+                alert("Connection pipeline failed.");
+            }
+        }
+    </script>
+</body>
+</html>

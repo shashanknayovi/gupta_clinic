@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gupta Clinic - Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section { background: #f8f9fa; padding: 60px 0; text-align: center; }
+        .card-login { transition: 0.3s; cursor: pointer; }
+        .card-login:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Gupta Clinic</a>
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <h1>Welcome to Gupta Clinic</h1>
+        <p>Your Health, Our Priority</p>
+    </div>
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <!-- Patient Login Card -->
+            <div class="col-md-4 mb-4">
+                <div class="card card-login text-center p-4">
+                    <h3>Patient Portal</h3>
+                    <p>Access E-Card, Reports & Appointments</p>
+                    <a href="patient-login.html" class="btn btn-outline-primary">Login / Register</a>
+                </div>
+            </div>
+            <!-- Staff Login Card -->
+            <div class="col-md-4 mb-4">
+                <div class="card card-login text-center p-4 border-primary">
+                    <h3>Staff Login</h3>
+                    <p>Doctor, Nursing, Pharmacy & Admin</p>
+                    <a href="staff-login.html" class="btn btn-primary">Staff Portal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

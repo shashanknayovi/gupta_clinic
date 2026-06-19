@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Officer Administration Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --sidebar-bg: #2c3e50;
+            --secondary-color: #f4f6f9;
+            --dark-color: #333;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --border-radius: 8px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR STYLE */
+        .sidebar {
+            width: 240px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            padding: 0 20px 20px 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: #2ecc71;
+            border-bottom: 1px solid #34495e;
+        }
+        .sidebar-brand span {
+            display: block;
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+
+        .sidebar-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sidebar-menu li.active a, .sidebar-menu li a:hover {
+            background-color: #34495e;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .logout-section { padding: 20px; }
+        .logout-btn {
+            background-color: var(--danger-color); color: white; border: none; padding: 12px;
+            border-radius: var(--border-radius); cursor: pointer; font-weight: bold; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+
+        /* MAIN CONTENT AREA */
+        .main-content {
+            flex-grow: 1;
+            padding: 25px 40px;
+            overflow-y: auto;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .top-header h1 { margin: 0; font-size: 28px; color: #222; }
+        
+        .badge-header { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 13px; }
+        .bg-black { background-color: #222; color: white; }
+        .bg-blue { background-color: #007bff; color: white; }
+
+        /* VIEW TOGGLE PANELS */
+        .tab-panel { display: none; }
+        .tab-panel.active-panel { display: block; }
+
+        /* GRID SYSTEM */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            margin-top: 0; border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px; color: var(--primary-color);
+            display: flex; align-items: center; gap: 10px; font-size: 18px;
+        }
+
+        /* FORMS & TABLES */
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: var(--border-radius); box-sizing: border-box; font-size: 14px; }
+        
+        .btn { background-color: var(--primary-color); color: white; border: none; padding: 11px 20px; border-radius: var(--border-radius); cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-success { background-color: var(--success-color); }
+        .btn:hover { opacity: 0.9; }
+
+        /* ROSTER ELEMENTS */
+        .doctor-list-grid { display: flex; flex-direction: column; gap: 12px; max-height: 380px; overflow-y: auto; margin-bottom: 15px; }
+        .doctor-item-card { background: #f8f9fa; border-left: 5px solid var(--primary-color); padding: 12px 18px; border-radius: var(--border-radius); display: flex; justify-content: space-between; align-items: center; }
+        .doctor-item-card.on-leave-border { border-left-color: var(--danger-color); }
+        .doc-info h3 { margin: 0 0 4px 0; font-size: 16px; }
+        .doc-info p { margin: 2px 0; color: #666; font-size: 13px; }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .badge-active { background-color: #d4edda; color: #155724; }
+        .badge-leave { background-color: #f8d7da; color: #721c24; }
+        .badge-role { background-color: #e2e3e5; color: #383d41; }
+
+        .leave-toggle-btn { padding: 8px 12px; border: none; border-radius: var(--border-radius); cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-mark-leave { background-color: var(--danger-color); color: white; }
+        .btn-mark-active { background-color: var(--success-color); color: white; }
+
+        .schedule-row { display: grid; grid-template-columns: 1.8fr 1fr 2fr 2fr; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .day-name { font-weight: bold; font-size: 14px; }
+        
+        .table-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: var(--border-radius); background: white; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f1f1f1; position: sticky; top: 0; color: #444; }
+        .delete-btn { background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 16px; }
+
+        /* NOTICE BOARD SPECIFIC STYLES */
+        .notice-card-item {
+            background: #fff8e1; border-left: 5px solid #ffb300; padding: 15px;
+            border-radius: var(--border-radius); margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .notice-content h4 { margin: 0 0 5px 0; font-size: 16px; color: #b78103; }
+        .notice-content p { margin: 0 0 8px 0; color: #444; font-size: 14px; }
+        .notice-content small { color: #888; font-size: 11px; }
+         /* Additional styles for charges section */
+        .charges-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            border: 1px dashed #ccc;
+        }
+        .charges-header {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .charge-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .charge-input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .charge-input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .save-charges-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 11px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .save-charges-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-user-shield"></i> MO Portal
+                <span>Clinic Administration</span>
+            </div>
+            <ul class="sidebar-menu">
+                <li id="menuRoster" class="active"><a onclick="switchTab('roster')"><i class="fa-solid fa-calendar-check"></i> Roster Mgmt</a></li>
+                <li id="menuStaff"><a onclick="switchTab('staff')"><i class="fa-solid fa-users-cog"></i> Staff Logins</a></li>
+                <li id="menuNotice"><a onclick="switchTab('notice')"><i class="fa-solid fa-bullhorn"></i> Notice Board</a></li>
+            </ul>
+        </div>
+        <div class="logout-section">
+            <button class="logout-btn" onclick="window.location.href='/index.html'">
+                <i class="fa-solid fa-sign-out-alt"></i> Logout Session
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-header">
+            <h1 id="dashboardTitle">Medical Officer Administration Dashboard</h1>
+            <div style="display: flex; gap: 10px;">
+                <span class="badge-header bg-black">MO Station: Master Desk</span>
+                <span class="badge-header bg-blue"><i class="fa-solid fa-shield-halved"></i> Owner Access</span>
+            </div>
+        </div>
+
+        <div id="panelRoster" class="tab-panel active-panel">
+            <div class="dashboard-grid">
+                <div class="left-pane">
+                    <div class="card">
+                        <h2><i class="fa-solid fa-network-wired"></i> Doctor Roster & Room Mapping</h2>
+                        <div id="doctorStatusGrid" class="doctor-list-grid"></div>
+                    </div>
+                </div>
+
+                <div class="right-pane">
+                    <div class="card">
+                        <h2><i class="fa-solid fa-calendar-days"></i> Long-Term Leave Period Planner</h2>
+                        <form id="leaveForm">
+                            <div class="form-group">
+                                <label for="doctorSelect">Select Doctor:</label>
+                                <select id="doctorSelect" class="form-control" required></select>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div class="form-group">
+                                    <label>From:</label>
+                                    <input type="date" id="startDate" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>To:</label>
+                                    <input type="date" id="endDate" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Reason / Remarks:</label>
+                                <input type="text" id="leaveReason" class="form-control" placeholder="e.g. Medical / Annual Leave" required>
+                            </div>
+                            <button type="submit" class="btn" style="width:100%;"><i class="fa-solid fa-plus-circle"></i> Lock Calendar Leave</button>
+                        </form>
+
+                        <div class="table-container" style="margin-top: 15px; max-height: 150px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Doctor</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaveLogTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2><i class="fa-solid fa-clock"></i> Clinic Operational Time & Days Setup</h2>
+                        <div id="scheduleContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelStaff" class="tab-panel">
+            <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 25px;">
+                <div class="card">
+                    <h2><i class="fa-solid fa-users"></i> System Authorized Users Accounts</h2>
+                    <p style="color:#666; font-size:13px; margin-top:-10px;">Database catalog me logged-in security privileges wale accounts ki list.</p>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Staff Name</th>
+                                    <th>Username</th>
+                                    <th>System Role</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="border-top: 4px solid var(--success-color);">
+                    <h2><i class="fa-solid fa-user-plus"></i> Register New Staff Login</h2>
+                    <form id="staffCreateForm">
+                        <div class="form-group">
+                            <label>Full Staff Name *</label>
+                            <input type="text" id="staffName" class="form-control" placeholder="e.g. Dr. Amit Parashar" required>
+                        </div>
+                        <div class="form-group">
+                            <label>System Username *</label>
+                            <input type="text" id="username" class="form-control" placeholder="e.g. dramit" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Account Password *</label>
+                            <input type="password" id="password" class="form-control" placeholder="Minimum 6 chars" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Role Hierarchy Allocation *</label>
+                            <select id="roleSelect" class="form-control" required>
+                                <option value="">Select Role Security...</option>
+                                <option value="doctor">Doctor Desk (Physician)</option>
+                                <option value="counter">Registration Counter</option>
+                                <option value="mo">Medical Officer (Admin)</option>
+                            </select>
+                        </div>
+                        <div id="doctorFields" class="form-row" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px dashed #ccc;">
+                            <div class="form-group">
+                                <label>Specialization</label>
+                                <input type="text" id="specialization" class="form-control" value="General Physician">
+                            </div>
+                            <div class="form-group">
+                                <label>Room No</label>
+                                <input type="text" id="roomNo" class="form-control" placeholder="103">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width:100%; margin-top:15px;"><i class="fa-solid fa-circle-check"></i> Generate Account & Sync</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="panelNotice" class="tab-panel">
+            <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 25px;">
+                
+                <div class="card">
+                    <h2><i class="fa-solid fa-bullhorn"></i> Active Broadcasted Notices</h2>
+                    <p style="color:#666; font-size:13px; margin-top:-10px;">Yeh announcements live counters aur patient slips dashboard par display hongi.</p>
+                    
+                    <div id="noticesContainer" style="max-height: 450px; overflow-y: auto; padding-right: 5px;">
+                        </div>
+                </div>
+
+                <div class="card" style="border-top: 4px solid #ffb300;">
+                    <h2><i class="fa-solid fa-pen-to-square"></i> Draft & Publish Announcement</h2>
+                    <form id="noticeCreateForm">
+                        <div class="form-group">
+                            <label>Notice Headline / Title *</label>
+                            <input type="text" id="noticeTitle" class="form-control" placeholder="e.g. Server Maintenance, Timing Change" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Detailed Message Body *</label>
+                            <textarea id="noticeMessage" class="form-control" rows="5" placeholder="Write full details here..." style="resize: none;" required></textarea>
+                        </div>
+                        <button type="submit" class="btn" style="width:100%; background-color: #ffb300; color: #333;">
+                            <i class="fa-solid fa-paper-plane"></i> Broadcast Notice Live
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+<!-- New Charges Setup Card -->
+        <div class="card charges-section">
+            <div class="charges-header">Clinic Charges Setup</div>
+            <div class="charge-input-group">
+                <div>
+                    <label for="opdCharge">OPD Charges (₹):</label>
+                    <input type="number" id="opdCharge" placeholder="Enter OPD Charges" min="0" required>
+                </div>
+                <div>
+                    <label for="emergencyCharge">Emergency Charges (₹):</label>
+                    <input type="number" id="emergencyCharge" placeholder="Enter Emergency Charges" min="0" required>
+                </div>
+            </div>
+            <button class="save-charges-btn" id="saveChargesBtn">Save Charges</button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLiveDoctorRoster();
+            loadDoctorsDropdown();
+            loadLeaveLogs();
+            loadClinicSchedule();
+            loadSystemUsers();
+            loadLiveNotices(); // Notice board array data trigger
+
+            document.getElementById('roleSelect').addEventListener('change', (e) => {
+                document.getElementById('doctorFields').style.display = (e.target.value === 'doctor') ? 'grid' : 'none';
+            });
+
+            // Staff Creation Handler
+            document.getElementById('staffCreateForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    staff_name: document.getElementById('staffName').value,
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                    role: document.getElementById('roleSelect').value,
+                    specialization: document.getElementById('specialization').value,
+                    room_no: document.getElementById('roomNo').value
+                };
+                try {
+                    const response = await fetch('/api/admin/create-staff', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if((await response.json()).success) {
+                        alert("Staff account generated successfully!");
+                        document.getElementById('staffCreateForm').reset();
+                        document.getElementById('doctorFields').style.display = 'none';
+                        loadLiveDoctorRoster(); loadDoctorsDropdown(); loadSystemUsers();
+                    }
+                } catch(err) { console.error(err); }
+            });
+
+            // Notice Form Handler
+            document.getElementById('noticeCreateForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    title: document.getElementById('noticeTitle').value,
+                    message: document.getElementById('noticeMessage').value
+                };
+                try {
+                    const response = await fetch('/api/admin/add-notice', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if((await response.json()).success) {
+                        alert("Notice broadcasted successfully!");
+                        document.getElementById('noticeCreateForm').reset();
+                        loadLiveNotices(); // Live Table sync refresh
+                    }
+                } catch(err) { console.error(err); alert("Notice Save Error"); }
+            });
+
+            // Leave Form Handler
+            document.getElementById('leaveForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    doctor_id: document.getElementById('doctorSelect').value,
+                    start_date: document.getElementById('startDate').value,
+                    end_date: document.getElementById('endDate').value,
+                    reason: document.getElementById('leaveReason').value
+                };
+                try {
+                    const response = await fetch('/api/admin/add-leave-period', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if((await response.json()).success) { alert("Timeframe locked!"); document.getElementById('leaveForm').reset(); loadLeaveLogs(); }
+                } catch(err) { console.error(err); }
+            });
+        });
+
+        // SINGLE PAGE ROUTING CONTROLLER
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active-panel'));
+            document.querySelectorAll('.sidebar-menu li').forEach(l => l.classList.remove('active'));
+
+            if(tabName === 'roster') {
+                document.getElementById('panelRoster').classList.add('active-panel');
+                document.getElementById('menuRoster').classList.add('active');
+                document.getElementById('dashboardTitle').textContent = "Medical Officer - Roster Desk";
+            } else if(tabName === 'staff') {
+                document.getElementById('panelStaff').classList.add('active-panel');
+                document.getElementById('menuStaff').classList.add('active');
+                document.getElementById('dashboardTitle').textContent = "Medical Officer - Staff Identity Logs";
+                loadSystemUsers();
+            } else if(tabName === 'notice') {
+                document.getElementById('panelNotice').classList.add('active-panel');
+                document.getElementById('menuNotice').classList.add('active');
+                document.getElementById('dashboardTitle').textContent = "Medical Officer - Notice Board Broadcast";
+                loadLiveNotices();
+            }
+        }
+
+        // FETCH & RENDER LIVE NOTICES
+        // FETCH & RENDER LIVE NOTICES (Fixed Version)
+async function loadLiveNotices() {
+            try {
+                const res = await fetch('/api/admin/get-notices');
+                const data = await res.json();
+                const container = document.getElementById('noticesContainer');
+                container.innerHTML = '';
+
+                // Safe check agar backend data direct array me bhej raha ho ya notices object me
+                const noticesList = data.notices || data;
+
+                if(!noticesList || noticesList.length === 0) {
+                    container.innerHTML = `<p style="text-align:center; color:#999; padding:30px;">Notice board is clear. No active announcements.</p>`;
+                    return;
+                }
+
+                noticesList.forEach(notice => {
+                    // PostgreSQL column 'posted_date' ki sahi mapping
+                    const dateStr = notice.posted_date ? new Date(notice.posted_date).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'}) : 'Today';
+                    
+                    container.innerHTML += `
+                        <div class="notice-card-item">
+                            <div class="notice-content">
+                                <h4><i class="fa-solid fa-circle-exclamation"></i> ${notice.title}</h4>
+                                <p>${notice.content}</p>
+                                <small><i class="fa-solid fa-clock"></i> Published on: ${dateStr}</small>
+                            </div>
+                            <button class="delete-btn" onclick="deleteNotice(${notice.id})" style="font-size:18px;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>`;
+                });
+            } catch(err) { 
+                console.error("Notice fetch error:", err); 
+            }
+        }
+
+        async function deleteNotice(id) {
+            if(!confirm("Kya aap is notice ko board se hatana chahte hain?")) return;
+            try {
+                // Sahi 'id' backend route par jayegi delete karne ke liye
+                const res = await fetch(`/api/admin/delete-notice/${id}`, { method: 'DELETE' });
+                const result = await res.json();
+                
+                if(result.success) {
+                    alert("Notice board se hata diya gaya hai!");
+                    loadLiveNotices(); // List refresh karne ke liye
+                } else {
+                    alert("Notice delete karne me koi dikkat aayi.");
+                }
+            } catch(err) { 
+                console.error("Delete error:", err); 
+            }
+        }
+
+        // SYSTEM USERS TABLE
+        async function loadSystemUsers() {
+            try {
+                const res = await fetch('/api/admin/get-users'); 
+                if(!res.ok) {
+                    const altRes = await fetch('/api/doctors');
+                    const backupDocs = await altRes.json();
+                    renderUsersTable(backupDocs.map(d => ({ staff_name: d.staff_name, username: d.username || 'mapped_user', role: 'doctor', user_id: d.user_id })));
+                    return;
+                }
+                renderUsersTable((await res.json()).users);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderUsersTable(usersList) {
+            const tbody = document.getElementById('usersTableBody'); tbody.innerHTML = '';
+            if(!usersList || usersList.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">No user accounts.</td></tr>`; return; }
+            usersList.forEach(user => {
+                tbody.innerHTML += `<tr><td><strong>${user.staff_name}</strong></td><td><code>${user.username}</code></td><td><span class="badge badge-role">${user.role}</span></td><td><button class="delete-btn" onclick="deleteUser(${user.user_id})"><i class="fa-solid fa-user-minus"></i></button></td></tr>`;
+            });
+        }
+
+        async function deleteUser(userId) {
+            if(!confirm("Remove user account?")) return;
+            try {
+                const res = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE' });
+                if((await res.json()).success) { loadSystemUsers(); loadLiveDoctorRoster(); }
+            } catch(err) { console.error(err); }
+        }
+
+        // LIVE ROSTER
+        async function loadLiveDoctorRoster() {
+            try {
+                const res = await fetch('/api/doctors');
+                const doctors = await res.json();
+                const grid = document.getElementById('doctorStatusGrid'); grid.innerHTML = '';
+                if(doctors.length === 0) { grid.innerHTML = `<p style="text-align:center; color:#999; padding:20px;">No records.</p>`; return; }
+                doctors.forEach(doc => {
+                    const isL = doc.on_leave;
+                    grid.innerHTML += `
+                        <div class="doctor-item-card ${isL ? 'on-leave-border' : ''}">
+                            <div class="doc-info">
+                                <h3>Dr. ${doc.staff_name}</h3>
+                                <p><strong>Specialization:</strong> ${doc.specialization} | <strong>Room:</strong> ${doc.room_no || 'N/A'}</p>
+                                <div style="margin-top:4px;"><span class="badge ${isL?'badge-leave':'badge-active'}">${isL?'On Leave':'Active'}</span></div>
+                            </div>
+                            <button class="leave-toggle-btn ${isL?'btn-mark-active':'btn-mark-leave'}" onclick="toggleDoctorInstantLeave(${doc.doctor_id}, ${!isL})">${isL ? 'Mark Active' : 'Mark Leave'}</button>
+                        </div>`;
+                });
+            } catch(err) { console.error(err); }
+        }
+
+        async function toggleDoctorInstantLeave(id, status) {
+            try {
+                const res = await fetch(`/api/doctors/toggle-leave/${id}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ leaveStatus: status })
+                });
+                if((await res.json()).success) loadLiveDoctorRoster();
+            } catch(err) { console.error(err); }
+        }
+
+        async function loadDoctorsDropdown() {
+            try {
+                const res = await fetch('/api/doctors');
+                const doctors = await res.json();
+                const dSelect = document.getElementById('doctorSelect');
+                dSelect.innerHTML = '<option value="">-- Choose Doctor --</option>';
+                doctors.forEach(doc => dSelect.innerHTML += `<option value="${doc.doctor_id}">Dr. ${doc.staff_name}</option>`);
+            } catch(err) { console.error(err); }
+        }
+
+        async function loadLeaveLogs() {
+            try {
+                const res = await fetch('/api/admin/get-leaves');
+                const data = await res.json();
+                const tbody = document.getElementById('leaveLogTableBody'); tbody.innerHTML = '';
+                if(data.leaves.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#999;">No slots.</td></tr>`; return; }
+                data.leaves.forEach(item => {
+                    tbody.innerHTML += `<tr><td><strong>Dr. ${item.staff_name}</strong></td><td>${item.start_date}</td><td>${item.end_date}</td><td><button class="delete-btn" onclick="deleteLeave(${item.leave_id})"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+                });
+            } catch(err) { console.error(err); }
+        }
+
+        async function deleteLeave(id) {
+            try {
+                const res = await fetch(`/api/admin/delete-leave/${id}`, { method: 'DELETE' });
+                if((await res.json()).success) loadLeaveLogs();
+            } catch(err) { console.error(err); }
+        }
+
+        async function loadClinicSchedule() {
+            try {
+                const res = await fetch('/api/admin/get-clinic-schedule');
+                const data = await res.json();
+                const container = document.getElementById('scheduleContainer'); container.innerHTML = '';
+                data.schedule.forEach(sched => {
+                    const openTime = sched.opening_time ? sched.opening_time.substring(0,5) : "09:00";
+                    const closeTime = sched.closing_time ? sched.closing_time.substring(0,5) : "17:00";
+                    container.innerHTML += `
+                        <div class="schedule-row">
+                            <div class="day-name">${sched.day_name}</div>
+                            <input type="checkbox" id="check-${sched.day_idx}" ${sched.is_working ? 'checked' : ''} onchange="updateScheduleItem(${sched.day_idx})">
+                            <input type="time" id="open-${sched.day_idx}" class="form-control" value="${openTime}" ${!sched.is_working ? 'disabled' : ''} onchange="updateScheduleItem(${sched.day_idx})">
+                            <input type="time" id="close-${sched.day_idx}" class="form-control" value="${closeTime}" ${!sched.is_working ? 'disabled' : ''} onchange="updateScheduleItem(${sched.day_idx})">
+                        </div>`;
+                });
+            } catch(err) { console.error(err); }
+        }
+
+        async function updateScheduleItem(dayIdx) {
+            const isWorking = document.getElementById(`check-${dayIdx}`).checked;
+            const openingTime = document.getElementById(`open-${dayIdx}`).value;
+            const closingTime = document.getElementById(`close-${dayIdx}`).value;
+            document.getElementById(`open-${dayIdx}`).disabled = !isWorking;
+            document.getElementById(`close-${dayIdx}`).disabled = !isWorking;
+            try {
+                await fetch('/api/admin/update-clinic-schedule', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ day_idx: dayIdx, is_working: isWorking, opening_time: openingTime + ":00", closing_time: closingTime + ":00" })
+                });
+            } catch (err) { console.error(err); }
+        }
+        async function loadClinicCharges() {
+    try {
+        const res = await fetch('/api/admin/get-clinic-config');
+        const data = await res.json();
+        // Database ke column names ke hisaab se update kiya:
+        document.getElementById('opdCharge').value = data.opd_charges || 0;
+        document.getElementById('emergencyCharge').value = data.emergency_charges || 0;
+    } catch (err) {
+        console.error('Error fetching clinic config:', err);
+    }
+}
+        // Existing DOMContentLoaded code...
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load existing charges on page load
+            loadClinicCharges();
+
+            // Save charges button click handler
+            document.getElementById('saveChargesBtn').addEventListener('click', saveClinicCharges); });
+        async function saveClinicCharges() {
+            const opdCharges = parseFloat(document.getElementById('opdCharge').value);
+            const emergencyCharges = parseFloat(document.getElementById('emergencyCharge').value);
+            if (isNaN(opdCharges) || isNaN(emergencyCharges)) {
+                alert('Please enter valid charges.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/admin/set-clinic-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        opd_charges: opdCharges,
+                        emergency_charges: emergencyCharges
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Charges updated successfully!');
+                } else {
+                    alert('Failed to update charges.');
+                }
+            } catch (err) {
+                console.error('Error saving charges:', err);
+                alert('Error saving charges.');
+            }
+        }
+    </script>
+</body>
+</html>

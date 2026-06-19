@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Billing - Gupta Clinic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Printing Ke Waqt Faltu Buttons Aur Search Box Hide Karne Ke Liye */
+        @media print {
+            .btn, .input-group, hr, label { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .form-control { border: none !important; padding: 0 !important; background: transparent !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+     <button onclick="handleDocLogout()" class="btn btn-danger btn-sm fw-bold px-3">Logout</button>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0 text-center">Gupta Clinic - OPD Bill Receipt</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Search Patient by Token No / Patient ID</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchPatient" placeholder="Enter Token or ID (e.g. 1)">
+                                <button class="btn btn-primary" onclick="fetchBillingDetails()">Fetch Details</button>
+                            </div>
+                        </div>
+                        
+                        <hr>
+
+                        <div id="billDetails" style="display: none;">
+                            <div class="alert alert-secondary p-2 mb-3">
+                                <p class="mb-1"><strong>Patient ID:</strong> <span id="lblPatientId">--</span></p>
+                                <p class="mb-1"><strong>Patient Name:</strong> <span id="lblPatientName">--</span></p>
+                                <p class="mb-1"><strong>Assigned Doctor:</strong> <span id="lblDoctorName">Dr. Gupta</span></p>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Consultation Fee (₹)</label>
+                                <input type="number" class="form-control billing-input" id="consultationFee" value="200" oninput="calculateTotal()">
+                            </div>
+
+<div class="mb-3">
+    <button type="button"
+            class="btn btn-outline-primary w-100"
+            onclick="loadAvailableMedicines()">
+        + Add Medicine
+    </button>
+</div>
+
+<div id="medicineBillContainer"></div>
+                            <div class="mb-3">
+    <label class="form-label">Medicine Charges (₹)</label>
+    <input type="number" class="form-control billing-input" id="medicineCharges" value="0" oninput="calculateTotal()">
+</div>
+                            <div class="mb-3">
+                                <label class="form-label">Emergency Charges (₹)</label>
+                                <input type="number" class="form-control billing-input" id="otherCharges" value="0" oninput="calculateTotal()">
+                            </div>
+                            
+                            <hr>
+                            <h3 class="text-end text-primary mb-4">Total: ₹<span id="lblTotal">200</span></h3>
+                            
+                            <button class="btn btn-success w-100 btn-lg" onclick="generateAndPrintReceipt()">Generate & Print Receipt</button>
+                            <hr>
+
+<div class="mt-4">
+    <h5 class="text-primary">Previous Bills Search</h5>
+
+    <div class="input-group mb-3">
+        <input type="number"
+               id="searchBillPatientId"
+               class="form-control"
+               placeholder="Enter Patient ID">
+
+        <button class="btn btn-info"
+                onclick="searchPreviousBills()">
+            Search Bills
+        </button>
+    </div>
+
+    <div id="previousBillsContainer"></div>
+</div>
+                        </div>
+
+                        <div id="noDataPlaceholder" class="text-center text-muted py-3">
+                            Please search a valid today's Token or Patient ID to generate bill.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+let currentPatientId = null;
+
+        function addMedicineCharge(btn) {
+
+    const row = btn.closest('.input-group');
+
+    const amountInput =
+        row.querySelector('.medicine-amount');
+
+    const amount =
+        parseFloat(amountInput.value) || 0;
+
+    const medicineCharges =
+        document.getElementById('medicineCharges');
+
+    medicineCharges.value =
+        (parseFloat(medicineCharges.value) || 0) + amount;
+
+    calculateTotal();
+
+    // dobara add na ho
+    btn.disabled = true;
+    btn.innerText = "Added";
+
+    amountInput.readOnly = true;
+}
+       
+async function loadAvailableMedicines() {
+
+    if (!currentPatientId) {
+        alert("Pehle Patient Search Karein!");
+        return;
+    }
+
+    const container =
+        document.getElementById('medicineBillContainer');
+
+    container.innerHTML = "Loading Medicines...";
+    
+
+    try {
+
+        const response =
+            await fetch(`/api/billing/medicines/${currentPatientId}`);
+
+        const data = await response.json();
+
+        if (!data.success || data.items.length === 0) {
+
+            container.innerHTML =
+                '<p class="text-danger">No Dispensed Medicines Found</p>';
+
+            return;
+        }
+
+        container.innerHTML = '';
+container.innerHTML = `
+    <div class="alert alert-info py-2 mb-3">
+        <strong>Dispensed Medicines</strong><br>
+        Enter medicine amount below.
+        Total bill will update automatically.
+    </div>
+`;
+        data.items.forEach(item => {
+
+            const row = document.createElement('div');
+
+            row.className = 'input-group mb-2';
+
+          row.innerHTML = `
+    <span class="input-group-text w-50">
+        ${item.medicine_name}
+    </span>
+
+    <input type="number"
+           class="form-control medicine-amount"
+           placeholder="Enter Amount">
+
+    <button type="button"
+            class="btn btn-success add-med-btn"
+            onclick="addMedicineCharge(this)">
+        Add
+    </button>
+`;
+            container.appendChild(row);
+        });
+
+    } catch(err) {
+
+        console.error(err);
+
+        container.innerHTML =
+            '<p class="text-danger">Medicine Fetch Error</p>';
+    }
+}
+        // 1. Patient ki details back-end se khinchne ke liye function
+async function fetchBillingDetails() {
+    const searchId = document.getElementById('searchPatient').value.trim();
+
+    if (!searchId) {
+        alert("Please enter a Token No or Patient ID!");
+        return;
+    }
+
+    try {
+
+        const response = await fetch(`/api/doctor/patient-details/${searchId}`);
+
+        const data =
+            await response.json();
+
+        console.log("Patient API Response:", data);
+        
+
+        if (response.ok && data.patient_id) {
+
+            currentPatientId = data.patient_id;
+
+            document.getElementById('lblPatientId').innerText =
+                data.patient_id;
+
+            document.getElementById('lblPatientName').innerText =
+                data.name;
+
+            
+
+            document.getElementById('consultationFee').value =
+    data.opd_charge_amount || 0;
+
+document.getElementById('otherCharges').value =
+    data.emergency_charge_amount || 0;
+
+            console.log(
+                "consultationFee field =",
+                document.getElementById('consultationFee').value
+            );
+
+            console.log(
+                "otherCharges field =",
+                document.getElementById('otherCharges').value
+            );
+
+            calculateTotal();
+
+            document.getElementById('billDetails').style.display =
+                'block';
+
+            document.getElementById('noDataPlaceholder').style.display =
+                'none';
+
+        } else {
+
+            alert(
+                data.message ||
+                "No active patient appointment found for today!"
+            );
+
+            resetBillingLayout();
+        }
+
+    } catch (err) {
+
+        console.error("Billing Fetch Error:", err);
+
+        alert("Error connecting to server!");
+
+        resetBillingLayout();
+    }
+}
+
+
+        // 2. Fees live calculate karne ke liye mathematics logic 
+       function calculateTotal() {
+
+    const consultFee =
+        parseFloat(document.getElementById('consultationFee').value) || 0;
+
+    const emergencyCharges =
+        parseFloat(document.getElementById('otherCharges').value) || 0;
+
+    const medicineCharges =
+        parseFloat(document.getElementById('medicineCharges').value) || 0;
+
+    const total =
+        consultFee +
+        emergencyCharges +
+        medicineCharges;
+
+    document.getElementById('lblTotal').innerText = total;
+}
+        // 3. Reset Layout Screen
+        function resetBillingLayout() {
+            document.getElementById('billDetails').style.display = 'none';
+            document.getElementById('noDataPlaceholder').style.display = 'block';
+            currentPatientId = null;
+        }
+
+        // 4. Print karne aur status alert trigger karne ka standard control
+async function generateAndPrintReceipt() {
+
+    const printBtn =
+        document.querySelector('.btn-success.w-100.btn-lg');
+
+    printBtn.disabled = true;
+    printBtn.innerText = "Generating Bill...";
+
+    const patientId = document.getElementById('lblPatientId').innerText;
+    const patientName = document.getElementById('lblPatientName').innerText;
+    const doctorName = document.getElementById('lblDoctorName').innerText;
+
+    const opd =
+        parseFloat(document.getElementById('consultationFee').value) || 0;
+
+    const medicine =
+        parseFloat(document.getElementById('medicineCharges').value) || 0;
+
+    const emergency =
+        parseFloat(document.getElementById('otherCharges').value) || 0;
+
+    const total =
+        parseFloat(document.getElementById('lblTotal').innerText) || 0;
+
+    const today =
+        new Date().toLocaleDateString('en-IN');
+
+    try {
+
+        const response = await fetch('/api/billing/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                opd_fee: opd,
+                emergency_fee: emergency,
+                total_amount: total
+            })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+
+            alert(result.message);
+
+            printBtn.disabled = false;
+            printBtn.innerText = "Generate & Print Receipt";
+
+            return;
+        }
+
+        const invoiceNo =
+            result.data.invoice_number;
+
+        const win = window.open('', '_blank');
+
+        win.document.write(`...same receipt html...`);
+
+        win.document.close();
+
+        setTimeout(() => {
+            win.print();
+        }, 500);
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert("Server error, bill generate nahi ho saka.");
+
+        printBtn.disabled = false;
+        printBtn.innerText = "Generate & Print Receipt";
+    }
+}
+function handleDocLogout() {
+            if (confirm("OPD Cabin session safe terminate karna chahte hain?")) {
+                window.location.href = '/index.html';
+            }
+        }
+async function searchPreviousBills() {
+
+    const patientId =
+        document.getElementById('searchBillPatientId').value;
+
+    if (!patientId) {
+        alert("Enter Patient ID");
+        return;
+    }
+
+    const container =
+        document.getElementById('previousBillsContainer');
+
+    container.innerHTML = "Loading...";
+
+    try {
+
+        const response =
+            await fetch(`/api/billing/history/${patientId}`);
+
+        const data =
+            await response.json();
+
+        if (!data.success || data.bills.length === 0) {
+
+            container.innerHTML =
+                `<div class="alert alert-warning">
+                    No Previous Bills Found
+                </div>`;
+
+            return;
+        }
+
+        let html = `
+        <table class="table table-bordered table-sm">
+            <thead>
+                <tr>
+                    <th>Bill ID</th>
+                    <th>Invoice No</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+
+        data.bills.forEach(bill => {
+
+            html += `
+            <tr>
+                <td>${bill.bill_id}</td>
+                <td>${bill.invoice_number}</td>
+                <td>₹${bill.amount}</td>
+                <td>${bill.payment_status}</td>
+                <td>${new Date(bill.created_at)
+                        .toLocaleString('en-IN')}</td>
+            </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+
+        container.innerHTML = html;
+
+    } catch(err) {
+
+        console.error(err);
+
+        container.innerHTML =
+            `<div class="alert alert-danger">
+                Error Loading Bills
+            </div>`;
+    }
+}        
+    </script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gupta Clinic | Vitals & Nursing Desk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Blue button design */
+.btn-upload-blue {
+    background-color: #0d6efd !important; /* Bootstrap Primary Blue */
+    color: white !important;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    display: inline-block;
+    width: 100%;
+}
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .navbar-custom { background: #17a2b8; color: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .dashboard-card { border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background: #ffffff; margin-bottom: 20px; }
+        .card-header-cyan { background: #17a2b8; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .card-header-dark { background: #212529; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .patient-strip { background: #eafafc; border-left: 4px solid #17a2b8; border-radius: 6px; padding: 12px; display: none; }
+        .bmi-badge { font-weight: bold; padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">🏥 GUPTA CLINIC | Nursing & Triage Module</h4>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-dark px-3 py-2 fs-6">Station: Pre-Check Room</span>
+            <button onclick="handleDeskLogout()" class="btn btn-danger btn-sm fw-bold px-3">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-dark">
+                        🔍 Patient Diagnostics Intake Registry
+                    </div>
+                    <div class="card-body bg-light">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-8">
+                                <input type="number" id="search_patient_id" class="form-control" placeholder="Enter Patient ID (e.g. 7, 101, etc.)" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-info w-100 text-white fw-bold" onclick="fetchPatientForVitals()">Fetch Patient Data</button>
+                            </div>
+                        </div>
+                        
+                        <div id="patient_info_strip" class="patient-strip mt-3">
+                            <div class="row">
+                                <div class="col-md-4"><strong>Patient ID:</strong> <span id="lbl_pid">--</span></div>
+                                <div class="col-md-5"><strong>Name:</strong> <span id="lbl_name">--</span></div>
+                                <div class="col-md-3"><strong>Age/Gender:</strong> <span id="lbl_age_gen">--</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-cyan">
+                        📊 Clinical Vital Signs Entry Matrix
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="vitalsForm" onsubmit="submitPatientVitals(event)" enctype="multipart/form-data">
+                            
+                            <input type="hidden" id="active_patient_id">
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-danger">Systolic BP (Upper - mmHg) *</label>
+                                    <input type="number" id="bp_systolic" class="form-control border-danger-subtle" placeholder="e.g. 120" min="70" max="250" required disabled>
+                                    <div class="form-text">Allowed range: 70 - 250</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-danger">Diastolic BP (Lower - mmHg) *</label>
+                                    <input type="number" id="bp_diastolic" class="form-control border-danger-subtle" placeholder="e.g. 80" min="40" max="150" required disabled>
+                                    <div class="form-text">Allowed range: 40 - 150</div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-primary">Pulse / Heart Rate (bpm) *</label>
+                                    <input type="number" id="pulse" class="form-control" placeholder="e.g. 72" min="30" max="200" required disabled>
+                                    <div class="form-text">Allowed range: 30 - 200</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-success">Oxygen Saturation (SpO2 %) *</label>
+                                    <input type="number" id="spo2" class="form-control" placeholder="e.g. 98" min="50" max="100" required disabled>
+                                    <div class="form-text">Allowed range: 50% - 100%</div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-warning">Body Temperature (°F) *</label>
+                                    <input type="number" step="0.1" id="temperature" class="form-control" placeholder="e.g. 98.6" min="95" max="106" required disabled>
+                                    <div class="form-text">Allowed range: 95.0°F - 106.0°F</div>
+                                </div>
+                                <div class="col-md-6">
+    <label class="form-label fw-semibold text-info">Upload Lab Report (Max 10MB) *</label>
+    <label for="lab_report_file" class="btn-upload-blue">Choose File</label>
+    <input type="file" id="lab_report_file" name="lab_report" class="form-control" style="display:none;" disabled onchange="validateFileSize(this)">
+    <div id="file_name_display" class="small mt-1">No file chosen</div>
+</div>
+                            </div>
+
+                            <hr class="text-secondary my-4">
+
+                            <h5 class="text-secondary mb-3">🏃 Physical Growth & BMI Tracking</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Height (cm) *</label>
+                                    <input type="number" id="height_cm" class="form-control" placeholder="e.g. 170" min="40" max="250" oninput="runLiveBMICalculator()" required disabled>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Weight (kg) *</label>
+                                    <input type="number" step="0.1" id="weight_kg" class="form-control" placeholder="e.g. 65" min="2" max="300" oninput="runLiveBMICalculator()" required disabled>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-muted">Computed BMI Score</label>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <h4 id="txt_bmi_score" class="mb-0 fw-bold text-dark">--</h4>
+                                        <span id="badge_bmi_status" class="bmi-badge bg-secondary text-white d-none">Normal</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 pt-3">
+                                <button type="submit" id="btn_submit_vitals" class="btn btn-dark btn-lg fw-bold" disabled>Save & Commit Vitals to EMR</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearVitalsEngine()">Clear Workspace</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function validateFileSize(input) {
+    const file = input.files[0];
+    const display = document.getElementById('file_name_display');
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (file) {
+        if (file.size > maxSize) {
+            alert("⚠️ File size 10MB se zyada hai! Kripya chhoti file chunein.");
+            input.value = ""; // Selection reset
+            display.innerText = "No file chosen";
+        } else {
+            display.innerText = "Selected: " + file.name;
+        }
+    }
+}
+        async function fetchPatientForVitals() {
+            const pidInput = document.getElementById('search_patient_id').value.trim();
+            if(!pidInput) {
+                alert("Pehle Patient ID box fill kariye!");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/registration/search-patient-by-id?patient_id=${pidInput}`);
+                const data = await res.json();
+
+                if(data.success && data.found) {
+                    document.getElementById('lbl_pid').innerText = `PID-${data.patient.patient_id}`;
+                    document.getElementById('lbl_name').innerText = data.patient.name.toUpperCase();
+                    document.getElementById('lbl_age_gen').innerText = `${data.patient.age} Yrs / ${data.patient.gender}`;
+                    document.getElementById('patient_info_strip').style.display = "block";
+                    
+                    document.getElementById('active_patient_id').value = data.patient.patient_id;
+                    toggleFormControls(false); 
+                } else {
+                    alert("❌ Yeh Patient ID system mein nahi mili. Kripya registration desk par check karein.");
+                    clearVitalsEngine();
+                }
+            } catch (err) {
+                console.error("Vitals engine fetch fail:", err);
+                alert("Database server connection failure.");
+            }
+        }
+
+        function runLiveBMICalculator() {
+            const height = parseFloat(document.getElementById('height_cm').value);
+            const weight = parseFloat(document.getElementById('weight_kg').value);
+            const bmiText = document.getElementById('txt_bmi_score');
+            const bmiBadge = document.getElementById('badge_bmi_status');
+
+            if(height > 0 && weight > 0) {
+                const heightInMeters = height / 100;
+                const bmi = weight / (heightInMeters * heightInMeters);
+                const optimizedScore = bmi.toFixed(1);
+                
+                bmiText.innerText = optimizedScore;
+                bmiBadge.classList.remove('d-none', 'bg-secondary', 'bg-success', 'bg-warning', 'bg-danger');
+
+                if(bmi < 18.5) {
+                    bmiBadge.innerText = "Underweight";
+                    bmiBadge.classList.add('bg-warning', 'text-dark');
+                } else if(bmi >= 18.5 && bmi < 24.9) {
+                    bmiBadge.innerText = "Normal Range";
+                    bmiBadge.classList.add('bg-success', 'text-white');
+                } else if(bmi >= 24.9 && bmi < 29.9) {
+                    bmiBadge.innerText = "Overweight";
+                    bmiBadge.classList.add('bg-warning', 'text-dark');
+                } else {
+                    bmiBadge.innerText = "Obese Class";
+                    bmiBadge.classList.add('bg-danger', 'text-white');
+                }
+            } else {
+                bmiText.innerText = "--";
+                bmiBadge.classList.add('d-none');
+            }
+        }
+
+        async function submitPatientVitals(event) {
+            event.preventDefault();
+
+            // FormData ka use kar rahe hain taaki file upload support ho sake
+            const formData = new FormData();
+            formData.append('patient_id', document.getElementById('active_patient_id').value);
+            formData.append('bp_systolic', document.getElementById('bp_systolic').value);
+            formData.append('bp_diastolic', document.getElementById('bp_diastolic').value);
+            formData.append('pulse', document.getElementById('pulse').value);
+            formData.append('spo2', document.getElementById('spo2').value);
+            formData.append('temperature', document.getElementById('temperature').value);
+            formData.append('height_cm', document.getElementById('height_cm').value);
+            formData.append('weight_kg', document.getElementById('weight_kg').value);
+            formData.append('bmi', document.getElementById('txt_bmi_score').innerText);
+            
+            const fileInput = document.getElementById('lab_report_file');
+            if(fileInput.files.length > 0) {
+                formData.append('lab_report', fileInput.files[0]);
+            }
+
+            const sys = parseInt(document.getElementById('bp_systolic').value);
+            const dia = parseInt(document.getElementById('bp_diastolic').value);
+            
+            if (dia >= sys) {
+                alert("Galti: Diastolic BP (Lower) kabhi bhi Systolic BP (Upper) se zyada ya uske barabar nahi ho sakta!");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/vitals/save', {
+                    method: 'POST',
+                    body: formData // Note: Content-Type header yahan manual set na karein, browser automatic set karega
+                });
+                const data = await res.json();
+
+                // Change this block in your HTML script:
+if(data.success) {
+    alert("🎉 Vitals & Lab Report successfully synchronized!");
+    clearVitalsEngine();
+} else {
+    // 'data.message' ya 'data.error' dono check karein
+    const errorMessage = data.message || data.error || "Unknown error occurred";
+    alert("Error saving vitals record: " + errorMessage);
+}
+            } catch (err) {
+                alert("Server execution failure.");
+            }
+        }
+
+        function toggleFormControls(status) {
+            document.getElementById('bp_systolic').disabled = status;
+            document.getElementById('bp_diastolic').disabled = status;
+            document.getElementById('pulse').disabled = status;
+            document.getElementById('spo2').disabled = status;
+            document.getElementById('temperature').disabled = status;
+            document.getElementById('height_cm').disabled = status;
+            document.getElementById('weight_kg').disabled = status;
+            document.getElementById('lab_report_file').disabled = status;
+            document.getElementById('btn_submit_vitals').disabled = status;
+        }
+
+        function clearVitalsEngine() {
+            document.getElementById('vitalsForm').reset();
+            document.getElementById('search_patient_id').value = '';
+            document.getElementById('active_patient_id').value = '';
+            document.getElementById('patient_info_strip').style.display = "none";
+            document.getElementById('txt_bmi_score').innerText = '--';
+            document.getElementById('badge_bmi_status').classList.add('d-none');
+            toggleFormControls(true);
+        }
+
+        function handleDeskLogout() {
+            if(confirm("Nursing workspace terminate karke exit karna chahte hain?")) {
+                window.location.href = '/index.html';
+            }
+        }
+    </script>
+</body>
+</html>

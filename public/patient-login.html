@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Portal - Gupta Clinic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .portal-header { background: #2c3e50; color: white; padding: 25px 0; border-radius: 0 0 15px 15px; }
+        .nav-tabs .nav-link.active { background-color: #1abc9c; color: white; border-color: #1abc9c; }
+
+@media print {
+    /* Pura page hide karke sirf card show karein */
+    body * { visibility: hidden; }
+    #emrContent, #emrContent * { visibility: visible; }
+
+    /* Card ko center mein rakhein aur break hone se bachayein */
+    #emrContent { 
+        position: fixed; 
+        left: 0; 
+        top: 0; 
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+
+    .card {
+        border: 2px solid #007bff !important;
+        box-shadow: none !important;
+        width: 90% !important; 
+        margin: 10mm auto !important;
+        /* Yeh command sabse zaroori hai: */
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .btn { display: none; }
+}
+
+        .emr-card { 
+            border: none;
+            border-left: 5px solid #1abc9c; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            background: #ffffff;
+            border-radius: 4px 8px 8px 4px;
+        }
+        
+        .med-table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+        .med-table th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .med-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #efefef;
+            font-size: 0.95rem;
+            vertical-align: middle;
+        }
+        .badge-doctor {
+            background-color: #e3f2fd;
+            color: #0d6efd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .badge-dosage {
+            background-color: #f1f3f5;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container py-5" id="authSection">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="text-center mb-4">
+                    <h2>Gupta Clinic Patient Portal</h2>
+                    <p class="text-muted">Access your Electronic Medical Records (EMR) instantly</p>
+                </div>
+                
+                <div class="card shadow border-0">
+                    <div class="card-header bg-white p-0">
+                        <ul class="nav nav-tabs nav-fill" id="authTabs">
+                            
+                            
+                            <li class="nav-item">
+                                <button class="nav-link active fw-bold" onclick="switchTab('login')">Login</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fw-bold" onclick="switchTab('register')">Register (First Time)</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label class="form-label">Patient ID / UHID</label>
+                                <input type="number" id="loginPatientId" class="form-control" placeholder="e.g. 1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" id="loginPassword" class="form-control" placeholder="Enter Password" required>
+                            </div>
+                            <button type="button" class="btn btn-primary w-100" onclick="handleLogin()">Access Dashboard</button>
+                            <div class="text-center mt-2">
+        <a href="#" onclick="event.preventDefault(); document.getElementById('forgotPasswordSection').style.display='block'; document.getElementById('loginForm').style.display='none';">
+            Forgot Password?
+        </a>
+    </div>
+                        </form>
+<div id="forgotPasswordSection" style="display:none;" class="card p-4 mt-3">
+    <h5>Reset Password</h5>
+    <input type="text" id="forgotPatientId" class="form-control mb-2" placeholder="Enter Patient ID">
+    <input type="text" id="forgotPhone" class="form-control mb-2" placeholder="Registered Phone Number">
+    <input type="password" id="newResetPassword" class="form-control mb-2" placeholder="New Password">
+    <button type="button" class="btn btn-danger" onclick="handleForgotPassword()">Reset My Password</button>
+</div>                        
+
+                        <form id="registerForm" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Your Patient ID / UHID</label>
+                                <input type="number" id="regPatientId" class="form-control" placeholder="Check your printed prescription or slip" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" id="regPhone" class="form-control" placeholder="Enter 10-digit number" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Create Secure Password</label>
+                                <input type="password" id="regPassword" class="form-control" placeholder="Set Password" required>
+                            </div>
+                            <button type="button" class="btn btn-success w-100" onclick="handleRegister()">Generate Account</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboardSection" style="display: none;">
+        <div class="portal-header shadow text-center mb-4">
+            <h1 class="mb-1">Gupta Clinic Digital Portal</h1>
+            <p class="mb-0">Welcome, <strong id="userGreeting">Patient</strong> | ID: <span id="userUHID">--</span></p>
+           <button class="btn btn-sm btn-danger mt-2"
+onclick="logoutPatient()">
+Logout
+</button>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-dark text-white fw-bold">About Gupta Clinic</div>
+                        <div class="card-body text-muted" style="font-size: 0.95rem;">
+                            <p class="mb-1"><strong>Address:</strong> Main Road Market, Near Railway Colony</p>
+                            <p class="mb-1"><strong>OPD Timings:</strong> 10:00 AM - 02:00 PM, 06:00 PM - 09:00 PM</p>
+                            <p class="mb-0"><strong>Emergency Helpline:</strong> +91 98765 XXXXX</p>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-secondary text-white fw-bold">Latest Circulars / Notice</div>
+                        <div class="card-body p-2" id="patient-notice-container">
+                            <marquee id="dynamic-marquee" direction="up" scrollamount="2" style="height: 100px;">
+                                <span class="text-muted small">Notices load ho rahe hain...</span>
+                            </marquee>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="row mb-3">
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body">
+                <h3 id="totalRx">0</h3>
+                <small>Prescriptions</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body">
+                <h3 id="bpLatest">--</h3>
+                <small>Blood Pressure</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body">
+                <h3 id="pulseLatest">--</h3>
+                <small>Pulse</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 text-center">
+            <div class="card-body">
+                <h3 id="spo2Latest">--</h3>
+                <small>SpO₂</small>
+            </div>
+        </div>
+    </div>
+
+</div>
+                            <h4 class="text-secondary border-bottom pb-2 mb-3">Your Electronic Medical Record (EMR)</h4>
+                            
+                            <ul class="nav nav-pills mb-3" id="emrTabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active me-2" id="tab-prescriptions" onclick="switchEmrView('prescriptions')">Prescriptions & OPD</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link me-2" id="tab-vitals" onclick="switchEmrView('vitals')">Vitals History</button>
+                                </li>
+                                
+                                <li class="nav-item">
+                                    <button class="nav-link" id="tab-lab" onclick="switchEmrView('lab')">Lab Reports</button>
+                                </li>
+                              <li class="nav-item">
+    <button class="nav-link" id="tab-bills" onclick="switchEmrView('bills')">
+        Billing History
+    </button>
+</li>
+<li class="nav-item">
+    <button class="nav-link" id="tab-appointment" onclick="switchEmrView('appointment')">
+        Book Appointment
+    </button>
+</li>
+<li class="nav-item">
+    <button class="nav-link"
+        id="tab-myappointments"
+        onclick="switchEmrView('myappointments')">
+
+        My Appointments
+
+    </button>
+</li>
+<li class="nav-item">
+    <button class="nav-link" id="tab-ecard" onclick="switchEmrView('ecard')">
+        E-Card
+    </button>
+</li>
+                            </ul>
+
+                            <div id="emrContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPatientData = null;
+        let emrCacheData = null;
+
+        // FIXED NO-REDIRECT: Removed DOMContentLoaded direct call to prevent auto-refresh loop back to login page.
+        // Dynamic notices will now load strictly inside handleLogin structure.
+window.onload = async () => {
+    const pid = localStorage.getItem('patient_id');
+    const pname = localStorage.getItem('patient_name');
+
+    if (pid) {
+        // Data recover karein
+        currentPatientData = {
+            patient_id: pid,
+            name: pname
+        };
+
+        // UI update karein
+        document.getElementById('userGreeting').innerText = pname;
+        document.getElementById('userUHID').innerText = pid;
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+
+        // Data load karein
+        loadPatientPortalNotices();
+        loadEMR(pid);
+    } else {
+        // Agar login nahi hai, toh login section dikhao
+        document.getElementById('authSection').style.display = 'block';
+        document.getElementById('dashboardSection').style.display = 'none';
+    }
+};
+        async function loadPatientPortalNotices() {
+            const marqueeBox = document.getElementById("dynamic-marquee");
+            if (!marqueeBox) return;
+
+            try {
+                const response = await fetch('/api/notices');
+                const data = await response.json();
+
+                if (data.success && data.notices.length > 0) {
+                    let compiledHTML = "";
+                    
+                    // FIXED GRAPHICS: Keeping the original exact dot indicator pattern and spacing
+                    data.notices.forEach(notice => {
+                        compiledHTML += `
+                            <span class="text-danger fw-bold">●</span> <strong>${notice.title}</strong>: ${notice.content}<br><br>
+                        `;
+                    });
+                    marqueeBox.innerHTML = compiledHTML;
+                } else {
+                    marqueeBox.innerHTML = `<span class="text-muted small">⚠️ Abhi koi naya notice nahi hai.</span>`;
+                }
+            } catch (err) {
+                console.error("Patient Portal Notice Error:", err);
+                marqueeBox.innerHTML = `<span class="text-danger small">Notices sync state failed.</span>`;
+            }
+        }
+
+        function switchTab(mode) {
+            const tabs = document.querySelectorAll('#authTabs button');
+            if(mode === 'login') {
+                tabs[0].classList.add('active'); tabs[1].classList.remove('active');
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('registerForm').style.display = 'none';
+            } else {
+                tabs[1].classList.add('active'); tabs[0].classList.remove('active');
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('registerForm').style.display = 'block';
+            }
+        }
+
+        async function handleRegister() {
+            const patient_id = document.getElementById('regPatientId').value;
+            const phone = document.getElementById('regPhone').value;
+            const password = document.getElementById('regPassword').value;
+
+            if(!patient_id || !phone || !password) return alert("All fields are mandatory!");
+
+            const res = await fetch('/api/patient/portal-register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id, phone, password })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if(res.ok) switchTab('login');
+        }
+
+       async function handleLogin() {
+    const patient_id = document.getElementById('loginPatientId').value;
+    const password = document.getElementById('loginPassword').value;
+
+    const res = await fetch('/api/patient/portal-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id, password })
+    });
+    const data = await res.json();
+
+    if(res.ok) {
+        // Pura object store karein
+        currentPatientData = data.patient;
+
+        // LocalStorage mein baaki details bhi save karein
+        localStorage.setItem('patient_id', data.patient.patient_id);
+        localStorage.setItem('patient_name', data.patient.name);
+        localStorage.setItem('patient_age', data.patient.age || '');
+        localStorage.setItem('patient_gender', data.patient.gender || '');
+        localStorage.setItem('patient_phone', data.patient.phone || '');
+
+        document.getElementById('userGreeting').innerText = currentPatientData.name;
+        document.getElementById('userUHID').innerText = currentPatientData.patient_id;
+
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+
+        loadPatientPortalNotices();
+        loadEMR(currentPatientData.patient_id);
+    } else {
+        alert(data.message);
+    }
+}
+
+        async function loadEMR(id) {
+            const res = await fetch(`/api/patient/emr/${id}`);
+            const data = await res.json();
+            if(res.ok) {
+                emrCacheData = data;
+                document.getElementById('totalRx').innerText =
+    data.visits ? data.visits.length : 0;
+
+if(data.vitals && data.vitals.length > 0){
+
+    const latest = data.vitals[0];
+
+    document.getElementById('bpLatest').innerText =
+        latest.bp || '--';
+
+    document.getElementById('pulseLatest').innerText =
+        latest.pulse || '--';
+
+    document.getElementById('spo2Latest').innerText =
+        latest.spo2 || '--';
+}
+                switchEmrView('prescriptions'); 
+            }
+        }
+
+        function switchEmrView(view) {
+
+    document.querySelectorAll('#emrTabs .nav-link')
+        .forEach(btn => btn.classList.remove('active'));
+
+    document.getElementById(`tab-${view}`)
+        .classList.add('active');
+
+    const container =
+        document.getElementById('emrContent');
+
+    container.innerHTML = '';
+
+    if (!emrCacheData) {
+
+        container.innerHTML =
+        `<div class="text-center text-muted p-4">
+            No data loaded yet.
+        </div>`;
+
+        return;
+    }
+
+    // ==========================
+    // PRESCRIPTIONS
+    // ==========================
+    if (view === 'prescriptions') {
+
+        if (!emrCacheData.visits ||
+            emrCacheData.visits.length === 0) {
+
+            container.innerHTML =
+            `<div class="alert alert-warning">
+                Koi prescription data nahi mila!
+            </div>`;
+
+            return;
+        }
+
+        emrCacheData.visits.forEach(visit => {
+
+            const matchingMeds =
+                emrCacheData.medicines.filter(
+                    m => m.rx_id === visit.rx_id
+                );
+
+            let medRows = '';
+
+            if (matchingMeds.length === 0) {
+
+                medRows =
+                `<tr>
+                    <td colspan="4"
+                        class="text-center text-muted">
+                        No medicines prescribed
+                    </td>
+                </tr>`;
+
+            } else {
+
+                matchingMeds.forEach(m => {
+
+                    medRows += `
+                    <tr>
+                        <td><strong>${m.medicine_name}</strong></td>
+                        <td>
+                            <span class="badge-dosage">
+                                ${m.dosage}
+                            </span>
+                        </td>
+                        <td>${m.days} Days</td>
+                        <td>${m.quantity} Tab(s)</td>
+                    </tr>`;
+                });
+            }
+
+            container.innerHTML += `
+            <div class="card emr-card p-3 mb-3">
+
+                <div class="d-flex justify-content-between
+                            align-items-center
+                            border-bottom pb-2 mb-2">
+
+                    <div>
+                        <h6 class="mb-0 text-primary fw-bold">
+                            Diagnosis:
+                            ${visit.diagnosis}
+                        </h6>
+
+                        <small class="text-muted">
+                            Date:
+                            ${new Date(
+                                visit.visit_date
+                            ).toLocaleDateString('en-IN')}
+                        </small>
+                    </div>
+
+                    <span class="badge-doctor">
+                        ${visit.doctor_name}
+                    </span>
+
+                </div>
+
+                <table class="med-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Dosage</th>
+                            <th>Duration</th>
+                            <th>Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${medRows}
+                    </tbody>
+                </table>
+
+            </div>`;
+        });
+    }
+
+    // ==========================
+    // VITALS
+    // ==========================
+    else if (view === 'vitals') {
+
+        if (!emrCacheData.vitals ||
+            emrCacheData.vitals.length === 0) {
+
+            container.innerHTML =
+            `<div class="alert alert-warning">
+                No vitals available
+            </div>`;
+
+            return;
+        }
+
+        let vitalRows = '';
+
+        emrCacheData.vitals.forEach(v => {
+
+            vitalRows += `
+            <tr>
+                <td>
+                    ${new Date(
+                        v.record_date
+                    ).toLocaleDateString('en-IN')}
+                </td>
+
+                <td>${v.bp || '--'}</td>
+                <td>${v.pulse || '--'}</td>
+                <td>${v.temperature || '--'}</td>
+                <td>${v.weight || '--'}</td>
+            </tr>`;
+        });
+
+        container.innerHTML = `
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>BP</th>
+                    <th>Pulse</th>
+                    <th>Temp</th>
+                    <th>Weight</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${vitalRows}
+            </tbody>
+        </table>`;
+    }
+
+    // ==========================
+    // LAB
+    // ==========================
+   else if (view === 'lab') {
+    container.innerHTML = `
+        <div class="p-4">
+            <h5>Lab Reports</h5>
+            <ul id="reportList" class="list-group"></ul>
+        </div>`;
+    loadReports(); // Yahan function call add karein
+}
+
+    // ==========================
+    // BILLS
+    // ==========================
+    else if (view === 'bills') {
+    container.innerHTML = `
+        <div class="p-4">
+            <h5>Billing History</h5>
+            <p>Total Bills: <span id="totalBills">0</span></p>
+            <table class="table">
+                <thead>
+                    <tr><th>Invoice</th><th>Amount</th><th>Status</th></tr>
+                </thead>
+                <tbody id="billTable">
+                    <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>`;
+    
+    // YE LINE ZAROORI HAI:
+    loadBills(); 
+}
+
+    // ==========================
+    // APPOINTMENT
+    // ==========================
+    else if (view === 'appointment') {
+
+        container.innerHTML = `
+        <div class="card">
+
+            <div class="card-header bg-success text-white">
+                Bo
+                ok Appointment
+            </div>
+
+            <div class="card-body">
+
+                <select id="doctorSelect"
+                    class="form-select mb-3">
+                </select>
+
+                <input type="date"
+                    id="appointmentDate"
+                    class="form-control mb-3">
+
+                <button
+                    class="btn btn-success"
+                    onclick="bookAppointment()">
+
+                    Book Appointment
+
+                </button>
+
+            </div>
+
+        </div>`;
+        loadDoctors();
+        
+    }
+else if(view === 'myappointments'){
+
+    container.innerHTML = `
+    <div class="p-4">
+
+        <h5>My Appointments</h5>
+
+        <table class="table table-bordered">
+
+            <thead>
+                <thead>
+    <tr>
+        <th>Date</th>
+        <th>Doctor</th>
+        <th>Queue</th>
+        <th>Type</th>
+        <th>Status</th>
+    </tr>
+</thead>
+            
+
+            <tbody id="appointmentHistory">
+
+                <tr>
+                    <td colspan="4">
+                        Loading...
+                    </td>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>`;
+
+    loadMyAppointments();
+}
+    // ==========================
+    // E-CARD
+    // ==========================
+    else if (view === 'ecard') {
+    // 1. Loading state dikhayein
+    container.innerHTML = `<div class="text-center">Loading E-Card...</div>`;
+// E-Card view mein ye line use karein:
+const age = localStorage.getItem('patient_age') || 'N/A';
+const phone = localStorage.getItem('patient_phone') || 'N/A';
+    // 2. Profile fetch karein (Agar aapke paas profile ka API hai)
+    // Agar nahi hai, toh hum 'currentPatientData' se kaam chalayenge
+    
+    container.innerHTML = `
+        <div class="card shadow" style="max-width: 400px; margin: auto; border: 2px solid #007bff;">
+            <div class="card-header bg-primary text-white text-center">
+                <h5>Gupta Clinic - Digital Card</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <img src="https://ui-avatars.com/api/?name=${currentPatientData.name}&background=random" 
+                         alt="Photo" class="rounded-circle" style="width: 120px; height: 120px;">
+                </div>
+                <table class="table table-borderless text-start">
+                    <tr><td><strong>Name:</strong></td><td>${currentPatientData.name || 'N/A'}</td></tr>
+                    <tr><td><strong>ID:</strong></td><td>${currentPatientData.patient_id || 'N/A'}</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>${currentPatientData.phone || 'N/A'}</td></tr>
+                </table>
+                <p class="text-muted small">Note: Age/Gender update karne ke liye clinic par sampark karein.</p>
+            </div>
+            <div class="card-footer text-center">
+                <button class="btn btn-primary" onclick="window.print()">Print E-Card</button>
+            </div>
+        </div>`;
+}}
+async function loadMyAppointments() {
+
+    const patientId = localStorage.getItem('patient_id');
+
+    const res = await fetch(
+        '/api/my-appointments/' + patientId
+    );
+
+    const data = await res.json();
+
+    const tbody =
+        document.getElementById('appointmentHistory');
+
+    if (!tbody) {
+        console.log('appointmentHistory not found');
+        return;
+    }
+
+    if (!Array.isArray(data)) {
+
+        tbody.innerHTML = `
+        <tr>
+            <td colspan="5">
+                Error Loading Appointments
+            </td>
+        </tr>`;
+        return;
+    }
+
+    if (data.length === 0) {
+
+        tbody.innerHTML = `
+        <tr>
+            <td colspan="5">
+                No Appointments Found
+            </td>
+        </tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map(row => {
+
+        const displayDate =
+            new Date(row.visit_date)
+            .toLocaleDateString('en-GB');
+
+        return `
+        <tr>
+            <td>${displayDate}</td>
+            <td>${row.staff_name}</td>
+            <td>${row.queue_no || '-'}</td>
+            <td>${row.visit_type || 'Walk-in'}</td>
+            <td>${row.status}</td>
+        </tr>
+        `;
+    }).join('');
+}
+async function loadDoctors() {
+    const doctorSelect = document.getElementById('doctorSelect'); // ID zarur check karein
+    if (!doctorSelect) return; // Agar element nahi mila toh function rok dein
+
+    try {
+        const r = await fetch('/api/get-active-doctors');
+        if (!r.ok) throw new Error('Network response was not ok');
+        
+        const d = await r.json();
+
+        // Agar response mein wrapper hai (jaise {doctors: [...]}), toh d.doctors use karein
+        // Agar direct array hai, toh d hi use karein
+        const doctors = Array.isArray(d) ? d : (d.doctors || []);
+
+        if (doctors.length > 0) {
+            doctorSelect.innerHTML = doctors.map(x => 
+                `<option value="${x.doctor_id}">
+                    ${x.staff_name} - ${x.specialization} (Room ${x.room_no})
+                </option>`
+            ).join('');
+        } else {
+            doctorSelect.innerHTML = '<option>No doctors available</option>';
+        }
+    } catch (error) {
+        console.error("Error loading doctors:", error);
+        doctorSelect.innerHTML = '<option>Error loading doctors</option>';
+    }
+}
+async function loadReports() {
+    // 1. DOM element ko select karein
+    const reportList = document.getElementById('reportList');
+    
+    // 2. Login ke waqt jo patient id save ki thi, use nikalenge
+    // 'currentPatientData' global variable hai jo window.onload mein set hota hai
+    const pid = currentPatientData ? currentPatientData.patient_id : null;
+    try {
+        // 3. Wahi ID use karein jo login ke time thi
+        const r = await fetch(`/api/reports/patient/${pid}`);
+        const d = await r.json();
+
+        // 4. Data display karein
+        if (d.success && d.reports && d.reports.length > 0) {
+            reportList.innerHTML = d.reports.map(x => `
+                <li class="list-group-item">
+                    <strong>${x.report_name}</strong> 
+                    <a href="${x.file_url}" target="_blank" class="btn btn-sm btn-primary ml-2">View</a>
+                </li>
+            `).join('');
+        } else {
+            reportList.innerHTML = '<li class="list-group-item">No reports available</li>';
+        }
+    } catch (error) {
+        console.error("Error loading reports:", error);
+        reportList.innerHTML = '<li class="list-group-item">Failed to load reports.</li>';
+    }
+}
+async function loadBills() {
+    // Har baar naye tarike se dhoondo
+    const billTable = document.getElementById('billTable');
+    const totalBills = document.getElementById('totalBills');
+    
+    const pid = localStorage.getItem('patient_id');
+    console.log("Debug - PID:", pid, "billTable found:", !!billTable);
+
+    if (!pid || !billTable) {
+        console.error("PID ya billTable missing hai!");
+        return;
+    }
+
+    try {
+        const r = await fetch(`/api/billing/history/${pid}`);
+        const d = await r.json();
+        
+        console.log("Debug - API Data:", d);
+
+        if (d.bills && d.bills.length > 0) {
+            totalBills.innerText = d.bills.length;
+            billTable.innerHTML = d.bills.map(x => `
+                <tr>
+                    <td>${x.invoice_number || 'N/A'}</td>
+                    <td>${x.amount || '0'}</td>
+                    <td>${x.payment_status || 'Pending'}</td>
+                </tr>`).join('');
+        } else {
+            billTable.innerHTML = '<tr><td colspan="3" class="text-center">No bills found</td></tr>';
+        }
+    } catch (error) {
+        console.error("Fetch Error:", error);
+    }
+}
+async function handleForgotPassword() {
+    const patient_id = document.getElementById('forgotPatientId').value;
+    const phone = document.getElementById('forgotPhone').value;
+    const newPassword = document.getElementById('newResetPassword').value;
+
+    const res = await fetch('/api/patient/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id, phone, newPassword })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+    if(res.ok) {
+        document.getElementById('forgotPasswordSection').style.display = 'none';
+        switchTab('login'); // Login tab par wapas bhej do
+    }
+}
+function logoutPatient(){
+
+    if(confirm("Are you sure you want to logout?")){
+
+        localStorage.removeItem('patient_id');
+        localStorage.removeItem('patient_name');
+
+        sessionStorage.clear();
+
+        window.location.href = "patient-login.html";
+    }
+}
+let bookingInProgress = false;
+async function bookAppointment() {
+
+    const patient_id = localStorage.getItem('patient_id');
+    const doctor_id = document.getElementById('doctorSelect').value;
+    const visit_date = document.getElementById('appointmentDate').value;
+
+    const res = await fetch('/api/book-appointment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            patient_id,
+            doctor_id,
+            visit_date
+        })
+    });
+
+    const data = await res.json();
+
+    console.log(data);
+
+    if (data.success) {
+
+        alert(
+            `Appointment Booked Successfully\nQueue No: ${data.queue_no}`
+        );
+
+    } else {
+
+        alert(data.message);
+
+    }
+}
+    </script>
+</body>
+</html>

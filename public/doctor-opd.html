@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gupta Clinic | Doctor OPD Desk</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .navbar-custom { background: #0d6efd; color: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .dashboard-card { border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); background: #ffffff; margin-bottom: 20px; }
+        .card-header-blue { background: #0d6efd; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .card-header-dark { background: #212529; color: white; font-weight: 600; padding: 12px 15px; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        
+        /* Clinical Vitals Badging */
+        .vital-indicator-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; text-align: center; }
+        .vital-value { font-size: 1.25rem; font-weight: bold; color: #212529; }
+        .vital-label { font-size: 0.8rem; text-transform: uppercase; color: #6c757d; font-weight: 600; }
+        
+        .queue-item { cursor: pointer; transition: 0.2s; }
+        .queue-item:hover { background-color: #f0f7ff; }
+        .active-patient-strip { background: #e7f1ff; border-left: 5px solid #0d6efd; padding: 12px; border-radius: 6px; }
+        .btn-examine-active {
+    background-color: #198754 !important; /* Bootstrap success green */
+    border-color: #198754 !important;
+    color: white !important;
+}
+    </style>
+</head>
+<body>
+
+    <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">🏥 GUPTA CLINIC | OPD Consultation Desk</h4>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-dark px-3 py-2 fs-6" id="doctorDisplay">
+    Loading Doctor...
+</span>
+            <button onclick="handleDocLogout()" class="btn btn-danger btn-sm fw-bold px-3">Logout</button>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        
+        <div class="card dashboard-card mb-4">
+            <div class="card-body active-patient-strip d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1 text-primary fw-bold" id="active_patient_title">Consulting: No Patient Selected</h4>
+                    <span class="text-muted fw-semibold" id="active_patient_meta">Please choose a token sequence from the live waiting queue.</span>
+                </div>
+                
+                <div>
+                    <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="openStockModal()">📦 View Available Medicine (Pharmacy)</button>
+                    <button type="button" class="btn btn-info btn-sm fw-bold text-white" onclick="viewPatientLabReports()">
+    📋 View Lab Reports
+</button>
+<button type="button"
+        class="btn btn-secondary btn-sm fw-bold"
+        onclick="viewPatientHistory()">
+    📜 View Patient History
+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-dark d-flex justify-content-between align-items-center">
+                        <span>⏳ Waiting Queue</span>
+                        <button class="btn btn-sm btn-outline-light py-0" onclick="fetchWaitingQueue()">🔄 Refresh</button>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                        <ul class="list-group list-group-flush" id="queue_list_wrapper">
+                            <li class="list-group-item text-center py-4 text-muted">No patient in waiting queue.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-blue">
+                        📊 Live Triage Patient Vitals (EMR Records)
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="row g-3" id="vitals_grid_container">
+                            
+                            <div class="col-6">
+                                <div class="vital-indicator-box border-danger-subtle">
+                                    <div class="vital-label text-danger">Blood Pressure</div>
+                                    <div class="vital-value" id="vit_bp">-- / --</div>
+                                    <small class="text-muted">mmHg</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-6">
+                                <div class="vital-indicator-box border-primary-subtle">
+                                    <div class="vital-label text-primary">Pulse Rate</div>
+                                    <div class="vital-value" id="vit_pulse">--</div>
+                                    <small class="text-muted">bpm</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="vital-indicator-box border-success-subtle">
+                                    <div class="vital-label text-success">Oxygen (SpO2)</div>
+                                    <div class="vital-value" id="vit_spo2">--</div>
+                                    <small class="text-muted">% Saturation</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="vital-indicator-box border-warning-subtle">
+                                    <div class="vital-label text-warning">Body Temp</div>
+                                    <div class="vital-value" id="vit_temp">--</div>
+                                    <small class="text-muted">°F</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="vital-indicator-box">
+                                    <div class="vital-label">Height / Weight</div>
+                                    <div class="vital-value" id="vit_ht_wt" style="font-size: 1.05rem; padding: 3px 0;">-- cm / -- kg</div>
+                                    <small class="text-muted">Metrics</small>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="vital-indicator-box">
+                                    <div class="vital-label">BMI Classification</div>
+                                    <div class="vital-value" id="vit_bmi" style="font-size: 1.1rem;">--</div>
+                                    <span id="vit_bmi_badge" class="badge bg-secondary small d-none">Normal</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="alert alert-light border text-center mt-3 py-2 small text-muted" id="vitals_timestamp_lbl">
+                            Vitals data state: Not fetched
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="card dashboard-card">
+                    <div class="card-header card-header-dark">
+                        📝 Digital Prescription Details
+                    </div>
+                    <div class="card-body">
+                        
+                        <form id="prescriptionForm" onsubmit="submitPrescription(event)">
+                            
+                            <input type="hidden" id="current_patient_id">
+                            <input type="hidden" id="current_queue_no">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Diagnosis / Clinical Notes *</label>
+                                <textarea id="diagnosis" class="form-control" rows="3" placeholder="Fever, Cold, Headaches, Gastric issues, etc." required disabled></textarea>
+                                
+                            </div>
+<div class="mb-3">
+    <label class="form-label fw-semibold text-success">
+        🧪 Diagnostic Tests / Investigations
+    </label>
+
+    <textarea
+        id="diagnostic_tests"
+        class="form-control"
+        rows="3"
+        placeholder="CBC, Blood Sugar, X-Ray Chest, ECG, LFT etc."></textarea>
+         <div class="mb-2 d-flex gap-2">
+    <button type="button"
+            class="btn btn-outline-success btn-sm"
+            onclick="addCharge('opd')">
+        + Add OPD Charge
+    </button>
+
+    <button type="button"
+            class="btn btn-outline-danger btn-sm"
+            onclick="addCharge('emergency')">
+        + Add Emergency Charge
+    </button>
+</div>
+
+<div id="charge_list" class="small text-muted"></div>
+</div>
+</div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-primary">Rx - Medicine Treatment Plan *</label>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <input type="text" id="med_name" class="form-control form-control-sm" placeholder="Medicine Name" disabled>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" id="med_qty" class="form-control form-control-sm" placeholder="Qty" min="1" disabled>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" id="med_dosage" class="form-control form-control-sm" placeholder="Dosage (e.g. 1-0-1)" disabled>
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-8">
+                                        <input type="text" id="med_duration" class="form-control form-control-sm" placeholder="Duration Instructions (e.g. 5 Days After Food)" disabled>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="addMedicineRow()" id="btn_add_med" disabled>+ Add Item</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive mt-2">
+                                    <table class="table table-sm table-bordered align-middle small text-center d-none" id="med_basket_table">
+                                        <thead class="table-light">
+                                            <tr>
+    <th>Date</th>
+    <th>Diagnosis</th>
+    <th>Medicines</th><th>SOS</th>
+    <th>Action</th>
+</tr>
+                                        </thead>
+                                        <tbody id="med_basket_body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="form-check mb-4 bg-light p-2 rounded ps-4 border">
+                                <input class="form-check-input" type="checkbox" id="is_sos" disabled>
+                                <label class="form-check-input-label fw-bold text-danger" for="is_sos">
+                                    🚨 Is SOS (Emergency Follow-up Required)?
+                                </label>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold" id="btn_save_rx" disabled>Save & Send to Pharmacy</button>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="pharmacyStockModal" tabindex="-1" aria-labelledby="stockModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h6 class="modal-title" id="stockModalLabel">📊 Current Pharmacy Inventory Stock</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-2">
+                    <table class="table table-sm table-striped table-bordered text-center align-middle mb-0" style="font-size: 0.9rem;">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Medicine Name</th>
+                                <th>Current Stock (Qty)</th>
+                                    <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal_stock_table_body">
+                            <tr>
+                                <td colspan="2" class="text-muted">Loading live stock...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+<div class="modal fade" id="labReportModal" tabindex="-1" aria-labelledby="labModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white py-2">
+                <h6 class="modal-title" id="labModalLabel">🧪 Patient Lab Reports</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2">
+                <div id="lab_reports_container" class="text-center">
+                    <p class="text-muted">Loading reports...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="patientHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title">
+                    📜 Patient Prescription History
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div id="patient_history_container">
+                    Loading history...
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+            let medicineBasket = [];
+            
+   document.addEventListener("DOMContentLoaded", async () => {
+    const doctorId = localStorage.getItem("doctor_id");
+    const displayElement = document.getElementById("doctorDisplay");
+
+    if (doctorId) {
+        try {
+            // 1. Server se naam fetch karein
+            const res = await fetch(`/api/doctor-name?doctor_id=${doctorId}`);
+            const data = await res.json();
+            
+            if (data.success && data.doctor_name) {
+                const rawName = data.doctor_name.trim();
+                // 2. Sirf ek baar "Dr." check karein
+                const displayName = rawName.toLowerCase().startsWith("dr.") 
+                                    ? rawName 
+                                    : "Dr. " + rawName;
+                
+                displayElement.innerText = displayName;
+            } else {
+                displayElement.innerText = "Doctor";
+            }
+        } catch (err) {
+            console.error("Name fetch error:", err);
+            displayElement.innerText = "Doctor";
+        }
+
+        // 3. Queue load karein (doctorId pass kar rahe hain taaki filter ho sake)
+        fetchWaitingQueue(doctorId); 
+    } else {
+        displayElement.innerText = "Login Required";
+        // Optional: Redirect to login page
+        // window.location.href = 'index.html'; 
+    }
+});
+let chargeCart = [];
+   
+function addCharge(type) {
+
+    if (type === 'opd') {
+        opdChargeApplied = !opdChargeApplied;
+    }
+
+    if (type === 'emergency') {
+        emergencyChargeApplied = !emergencyChargeApplied;
+    }
+
+    renderChargeList();
+}
+
+function renderChargeList() {
+
+    const div = document.getElementById('charge_list');
+
+    let html = '';
+
+    if (opdChargeApplied) {
+        html += `
+            <div class="badge bg-success me-2">
+                OPD Charge Added
+            </div>
+        `;
+    }
+
+    if (emergencyChargeApplied) {
+        html += `
+            <div class="badge bg-danger">
+                Emergency Charge Added
+            </div>
+        `;
+    }
+
+    div.innerHTML = html;
+}
+
+function addCharge(type) {
+
+    const exists = chargeCart.find(c => c.type === type);
+
+    if (exists) {
+        alert("Charge already added!");
+        return;
+    }
+
+    if (type === 'opd') {
+        chargeCart.push({
+            type: 'opd',
+            name: 'OPD Charges',
+            amount: Number(clinicCharges.opd_charges || 0)
+        });
+    }
+
+    if (type === 'emergency') {
+        chargeCart.push({
+            type: 'emergency',
+            name: 'Emergency Charges',
+            amount: Number(clinicCharges.emergency_charges || 0)
+        });
+    }
+
+    renderCharges();
+}
+
+function renderCharges() {
+
+    const div = document.getElementById('charge_list');
+
+    if (chargeCart.length === 0) {
+        div.innerHTML = "No charges added";
+        return;
+    }
+
+    let html = "<ul class='list-group'>";
+
+    chargeCart.forEach((c, index) => {
+
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${c.name} - ₹${c.amount}</span>
+
+                <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    onclick="removeCharge(${index})">
+                    Remove
+                </button>
+            </li>
+        `;
+    });
+
+    html += "</ul>";
+
+    div.innerHTML = html;
+}
+
+function removeCharge(index) {
+    chargeCart.splice(index, 1);
+    renderCharges();
+}
+
+async function viewPatientLabReports() {
+    const pid = document.getElementById('current_patient_id').value;
+    if (!pid) { alert("Pehle queue se ek patient select karein!"); return; }
+
+    const container = document.getElementById('lab_reports_container');
+    const modalEl = new bootstrap.Modal(document.getElementById('labReportModal'));
+    modalEl.show();
+    container.innerHTML = "Loading...";
+
+    try {
+        const res = await fetch(`/api/reports/patient/${pid}`);
+        const data = await res.json();
+
+        if (data.success && data.reports.length > 0) {
+            container.innerHTML = '<div class="list-group">';
+            data.reports.forEach(report => {
+                container.innerHTML += `
+                    <a href="${report.file_url}" target="_blank" class="list-group-item list-group-item-action">
+                        📄 ${report.report_name}
+                    </a>`;
+            });
+            container.innerHTML += '</div>';
+        } else {
+            container.innerHTML = "<p>Koi report nahi mili.</p>";
+        }
+    } catch (err) {
+        container.innerHTML = "<p class='text-danger'>Server error!</p>";
+    }
+}
+ 
+// 1. Fetch Today's Queue for Doctors
+async function fetchWaitingQueue(currentDoctorId) {
+    // 1. Agar parameter nahi mila, toh localStorage se dhoondo
+    const doctorId = currentDoctorId || localStorage.getItem("doctor_id");
+
+    console.log("Debugging - Current Doctor ID being used:", doctorId);
+
+    if (!doctorId) {
+        console.error("ERROR: No active doctor ID found! Check if login was successful.");
+        const wrapper = document.getElementById('queue_list_wrapper');
+        if (wrapper) wrapper.innerHTML = `<li class="list-group-item text-danger">Error: Doctor session not found. Please login again.</li>`;
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/registration/today-queue?doctor_id=${doctorId}`);
+        
+        // Agar response 200 nahi hai, toh error throw karein
+        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+        
+        const data = await res.json();
+        console.log("Debugging - Backend Response Data:", data);
+
+        const wrapper = document.getElementById('queue_list_wrapper');
+        if (!wrapper) return;
+        
+        const waitingPatients = data.success ? data.queue.filter(p => p.status === 'Waiting') : [];
+
+        if (waitingPatients.length > 0) {
+            wrapper.innerHTML = '';
+            waitingPatients.forEach(p => {
+                const patientAge = p.age ?? '';
+                const patientGender = p.gender ?? '';
+
+                wrapper.innerHTML += `
+                     <li class="list-group-item queue-item d-flex justify-content-between align-items-center py-2 fw-semibold"
+                        id="queue_row_${p.patient_id}"
+                        onclick="examinePatientEngine(${p.patient_id}, ${p.queue_no}, '${p.name.replace(/'/g, "\\'")}', '${patientAge}', '${patientGender}')">
+                        <div>
+                            <span class="badge bg-secondary me-2">#${p.queue_no}</span>
+                            <span>${p.name}</span>
+                        </div>
+                        <button class="btn btn-sm btn-primary py-0" id="btn_examine_${p.patient_id}">
+                            Examine
+                        </button>
+                     </li>
+                `;
+            });
+        } else {
+            wrapper.innerHTML = `<li class="list-group-item text-center py-4 text-muted">No patient in waiting queue.</li>`;
+        }
+    } catch (err) {
+        console.error("Queue syncing crashed:", err);
+    }
+}
+        // 2. Select Patient and Fetch Live Triage Advanced Vitals from Database
+        async function examinePatientEngine(pid, qno, name, age, gender) {
+            const displayAge = age ? age : '--';
+            const displayGender = gender ? gender : '--';
+            document.getElementById('active_patient_title').innerText = `Consulting: ${name} (${displayAge} Yrs / ${displayGender})`;
+// 1. Reset all buttons to default blue (Bootstrap primary)
+    document.querySelectorAll('.queue-item button').forEach(btn => {
+        btn.classList.remove('btn-examine-active');
+        btn.classList.add('btn-primary');
+        btn.innerText = "Examine";
+        toggleRxWorkspace(false); // Enable fields
+    });
+
+    // 2. Set current button to green
+    const currentBtn = document.getElementById(`btn_examine_${pid}`);
+    if (currentBtn) {
+        currentBtn.classList.remove('btn-primary');
+        currentBtn.classList.add('btn-examine-active');
+        currentBtn.innerText = "Active";
+    }
+            document.getElementById('active_patient_title').innerText = `Consulting: ${name} (${displayAge} Yrs / ${displayGender})`;
+            document.getElementById('active_patient_meta').innerText = `Patient Reference ID: PID-${pid} | Active Queue Serial Sequence: #${qno}`;
+                    
+            document.getElementById('current_patient_id').value = pid;
+            document.getElementById('current_queue_no').value = qno;
+
+            medicineBasket = [];
+            renderMedicineBasket();
+            document.getElementById('prescriptionForm').reset();
+            document.getElementById('current_patient_id').value = pid;
+            document.getElementById('current_queue_no').value = qno;
+            toggleRxWorkspace(false);
+
+            try {
+                const res = await fetch(`/api/vitals/latest?patient_id=${pid}`);
+                const data = await res.json();
+
+                if (data.success && data.vitals) {
+                    const v = data.vitals;
+                    document.getElementById('vit_bp').innerText = `${v.bp_systolic || '--'} / ${v.bp_diastolic || '--'}`;
+                    document.getElementById('vit_pulse').innerText = v.pulse || '--';
+                    document.getElementById('vit_spo2').innerText = v.spo2 ? `${v.spo2}%` : '--';
+                    document.getElementById('vit_temp').innerText = v.temperature || '--';
+                    document.getElementById('vit_ht_wt').innerText = `${v.height_cm || '--'} cm / ${v.weight || '--'} kg`;
+                    
+                    if(v.bmi) {
+                        document.getElementById('vit_bmi').innerText = v.bmi;
+                        const badge = document.getElementById('vit_bmi_badge');
+                        badge.classList.remove('d-none');
+                        badge.innerText = v.bmi >= 24.9 ? "Overweight" : (v.bmi < 18.5 ? "Underweight" : "Normal");
+                        badge.className = `badge small ${v.bmi >= 24.9 ? 'bg-warning text-dark' : (v.bmi < 18.5 ? 'bg-danger' : 'bg-success')}`;
+                    } else {
+                        document.getElementById('vit_bmi').innerText = '--';
+                        document.getElementById('vit_bmi_badge').classList.add('d-none');
+                    }
+                    
+                    document.getElementById('vitals_timestamp_lbl').className = "alert alert-success border text-center mt-3 py-2 small fw-semibold";
+                    document.getElementById('vitals_timestamp_lbl').innerText = `Vitals loaded via Nurse Desk: Match Found.`;
+                } else {
+                    resetVitalsDisplayGrid("⚠️ No recorded triage vitals found from Nurse Station for today.");
+                }
+            } catch (err) {
+                resetVitalsDisplayGrid("❌ System communication failure loading vital metrics.");
+            }
+        }
+
+        // 3. Medicine Rows Multi-basket Mechanism
+        function addMedicineRow() {
+            const name = document.getElementById('med_name').value.trim();
+            const qty = document.getElementById('med_qty').value;
+            const dosage = document.getElementById('med_dosage').value.trim();
+            const duration = document.getElementById('med_duration').value.trim();
+
+            if (!name || !qty || !dosage) {
+                alert("Medicine details (Name, Qty, Dosage) empty nahi hone chahiye!");
+                return;
+            }
+
+            medicineBasket.push({
+    medicine_name: name,
+    quantity: qty,
+    dosage: dosage,
+    days: parseInt(duration) || 1
+});
+            
+            document.getElementById('med_name').value = '';
+            document.getElementById('med_qty').value = '';
+            document.getElementById('med_dosage').value = '';
+            document.getElementById('med_duration').value = '';
+
+            renderMedicineBasket();
+        }
+
+        function renderMedicineBasket() {
+    const table = document.getElementById('med_basket_table');
+    const tbody = document.getElementById('med_basket_body');
+
+    if (medicineBasket.length > 0) {
+        table.classList.remove('d-none');
+        tbody.innerHTML = '';
+
+        medicineBasket.forEach((m, idx) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-start fw-bold">${m.medicine_name}</td>
+                    <td>
+                        <span class="badge bg-dark">${m.quantity}</span>
+                    </td>
+                    <td class="text-muted small">
+                        ${m.dosage} (${m.days} day(s))
+                    </td>
+                    <td>
+                        <button type="button"
+                                class="btn btn-danger btn-sm py-0"
+                                onclick="removeMedicineItem(${idx})">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+    } else {
+        table.classList.add('d-none');
+    }
+}
+
+        function removeMedicineItem(index) {
+            medicineBasket.splice(index, 1);
+            renderMedicineBasket();
+        }
+
+        // 4. Submit Treatment Prescription
+        async function submitPrescription(event) {
+    event.preventDefault();
+    const pid = document.getElementById('current_patient_id').value;
+    const qno = document.getElementById('current_queue_no').value;
+    const diagnosticTests = document.getElementById('diagnostic_tests').value;
+    const diagnosisText = document.getElementById('diagnosis').value;
+    const sosChecked = document.getElementById('is_sos').checked;
+
+    if (medicineBasket.length === 0) {
+        alert("Kam-se-kam ek medicine treatment plan mein add kijiye!");
+        return;
+    }
+
+    // UPDATED PAYLOAD: 'chargeCart' ko send kar rahe hain
+    const payload = {
+        patient_id: pid,
+        queue_no: qno,
+        diagnosis: diagnosisText,
+        diagnostic_tests: diagnosticTests,
+        medicines: medicineBasket,
+        is_sos: sosChecked,
+        chargeCart: chargeCart // Yahan hum poora cart bhej rahe hain
+    };
+
+    try {
+        console.log("Sending Payload:", payload);
+        const res = await fetch('/api/doctor/save-prescription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            printPrescription({
+                patientId: pid,
+                diagnosis: diagnosisText,
+                diagnostic_tests: diagnosticTests,
+                medicines: medicineBasket,
+                is_sos: sosChecked,
+                charges: chargeCart // Print function ke liye bhi charges bhej sakte hain
+            });
+            alert("🎉 Prescription verified and dispatched to Pharmacy counter database!");
+            resetEntireOPDWorkspace();
+        } else {
+            alert("Error archiving prescription data: " + data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("EMR network server transmission error.");
+    }
+}
+
+        // Fetch two columns live stock and overlay modal natively
+        // Fetch two columns live stock and overlay modal natively (FIXED IDs)
+function openStockModal() {
+    // 1. Correct Bootstrap 5 Modal Initialization & Show
+    const stockModalEl = document.getElementById('pharmacyStockModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(stockModalEl);
+    modalInstance.show();
+
+    // 2. Fetch fresh stock details from backend
+    fetch('/api/pharmacy/inventory')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            // FIXED: Element ID changed from 'stockTableBody' to 'modal_stock_table_body'
+            const tableBody = document.getElementById('modal_stock_table_body'); 
+            tableBody.innerHTML = ''; // Purana data clear karein
+
+            // Agar backend se array direct aa rahi hai ya response validation handle karna ho
+            const stockItems = Array.isArray(data) ? data : (data.stock || data.data || []);
+
+            if (stockItems.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="2" style="color:orange; text-align:center; font-weight: 600; py-3;">⚠️ No Stock Available in Database</td></tr>`;
+                return;
+            }
+
+            // Table ke andar entries render karein
+            stockItems.forEach(item => {
+                const row = `
+<tr>
+    <td class="text-start ps-3 fw-semibold">
+        ${item.medicine_name}
+    </td>
+
+    <td>
+        <span class="badge bg-dark px-3">
+            ${item.current_stock}
+        </span>
+    </td>
+
+    <td>
+        <button
+            class="btn btn-success btn-sm"
+            onclick="selectMedicine('${item.medicine_name.replace(/'/g, "\\'")}')">
+            Select
+        </button>
+    </td>
+</tr>`;
+                tableBody.innerHTML += row;
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching stock:', error);
+            // FIXED: Fallback message targeting correct element id
+            const tableBody = document.getElementById('modal_stock_table_body');
+            tableBody.innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; font-weight:600; py-3;">❌ Failed to connect with server database.</td></tr>`;
+        });
+}
+        // Helpers Utilities
+        function toggleRxWorkspace(status) {
+    document.getElementById('diagnosis').disabled = status;
+    document.getElementById('diagnostic_tests').disabled = status;
+
+    document.getElementById('med_name').disabled = status;
+    document.getElementById('med_qty').disabled = status;
+    document.getElementById('med_dosage').disabled = status;
+    document.getElementById('med_duration').disabled = status;
+
+    document.getElementById('btn_add_med').disabled = status;
+    document.getElementById('is_sos').disabled = status;
+    document.getElementById('btn_save_rx').disabled = status;
+}
+
+        function resetVitalsDisplayGrid(msg) {
+            document.getElementById('vit_bp').innerText = '-- / --';
+            document.getElementById('vit_pulse').innerText = '--';
+            document.getElementById('vit_spo2').innerText = '--';
+            document.getElementById('vit_temp').innerText = '--';
+            document.getElementById('vit_ht_wt').innerText = '-- cm / -- kg';
+            document.getElementById('vit_bmi').innerText = '--';
+            document.getElementById('vit_bmi_badge').classList.add('d-none');
+            
+            document.getElementById('vitals_timestamp_lbl').className = "alert alert-warning border text-center mt-3 py-2 small text-dark";
+            document.getElementById('vitals_timestamp_lbl').innerText = msg;
+        }
+
+        function resetEntireOPDWorkspace() {
+            document.getElementById('active_patient_title').innerText = 'Consulting: No Patient Selected';
+            document.getElementById('active_patient_meta').innerText = 'Please choose a token sequence from the live waiting queue.';
+            medicineBasket = [];
+            renderMedicineBasket();
+            document.getElementById('prescriptionForm').reset();
+            resetVitalsDisplayGrid("Vitals data state: Not fetched");
+            toggleRxWorkspace(true);
+            fetchWaitingQueue();
+        }
+async function viewPatientHistory() {
+    const pid = document.getElementById('current_patient_id').value;
+
+    if (!pid) {
+        alert("Pehle patient select karein.");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('patientHistoryModal'));
+    modal.show();
+
+    const container = document.getElementById('patient_history_container');
+    container.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <p>Loading previous prescriptions...</p>
+        </div>
+    `;
+
+    try {
+        const res = await fetch(`/api/patient/history/${pid}`);
+        const data = await res.json();
+
+        if (!data.success || data.history.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    No previous prescription history found.
+                </div>
+            `;
+            return;
+        }
+
+        let html = `
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Diagnosis</th>
+                        <th>Medicines</th>
+                        <th>SOS</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.history.forEach(item => {
+            // Medicine JSON ko handle karna
+            let medList = 'No medicine prescribed';
+            let meds = item.medicines;
+
+            // Agar meds string format mein hai, to use JSON parse karein
+            if (typeof meds === 'string') {
+                try { meds = JSON.parse(meds); } catch (e) { meds = null; }
+            }
+
+            // Agar meds ek array hai, to use format karein
+            if (Array.isArray(meds) && meds.length > 0) {
+                medList = meds.map(m => {
+            const name = m.medicine_name || m.name || 'Unknown';
+            const qty = m.quantity || m.qty || '0';
+            const dosage = m.dosage || m.instructions || '';
+            return `${name} (${qty} Qty, ${dosage})`;
+        }).join('<br>');
+    }
+
+            // Date format aur row generation
+            const formattedDate = item.date_recorded ? new Date(item.date_recorded).toLocaleDateString() : 'N/A';
+            
+            html += `
+                <tr>
+    <td>${formattedDate}</td>
+    <td>${item.diagnosis || '-'}</td>
+    <td>${medList}</td>
+    <td>${item.is_sos ? '🚨 Yes' : 'No'}</td>
+
+    <td>
+        <button
+            class="btn btn-sm btn-primary"
+            onclick='printOldPrescription(${JSON.stringify(item)})'>
+            🖨 Print
+        </button>
+    </td>
+</tr>
+`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error("History Load Error:", err);
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                Server error while loading history.
+            </div>
+        `;
+    }
+}
+        function handleDocLogout() {
+            if (confirm("OPD Cabin session safe terminate karna chahte hain?")) {
+                window.location.href = '/index.html';
+            }
+        }
+        function printPrescription(rxData) {
+
+    const patientName =
+        document.getElementById('active_patient_title')
+        .innerText.replace('Consulting: ', '');
+
+    const today = new Date().toLocaleDateString('en-IN');
+
+    let medicineRows = '';
+
+    rxData.medicines.forEach((m, index) => {
+        medicineRows += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${m.medicine_name}</td>
+                <td>${m.quantity}</td>
+                <td>${m.dosage}</td>
+                <td>${m.days} Days</td>
+            </tr>
+        `;
+    });
+
+    const printWindow = window.open('', '', 'width=900,height=1000');
+
+    printWindow.document.write(`
+    <html>
+    <head>
+        <title>Prescription</title>
+
+        <style>
+            body{
+                font-family: Arial, sans-serif;
+                padding:25px;
+                color:#000;
+            }
+
+            .header{
+                text-align:center;
+                border-bottom:2px solid #000;
+                padding-bottom:10px;
+                margin-bottom:20px;
+            }
+
+            .clinic{
+                font-size:28px;
+                font-weight:bold;
+            }
+
+            .doctor{
+                font-size:18px;
+                margin-top:5px;
+            }
+
+            .info{
+                margin-top:20px;
+                line-height:1.8;
+            }
+
+            table{
+                width:100%;
+                border-collapse:collapse;
+                margin-top:15px;
+            }
+
+            table th,
+            table td{
+                border:1px solid #000;
+                padding:8px;
+                text-align:left;
+            }
+
+            .diagnosis{
+                margin-top:20px;
+            }
+
+            .footer{
+                margin-top:80px;
+            }
+
+            .sign{
+                float:right;
+                text-align:center;
+            }
+
+            .sign-line{
+                width:200px;
+                border-top:1px solid #000;
+                margin-top:60px;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="header">
+            <div class="clinic">
+                GUPTA CLINIC
+            </div>
+
+            <div class="doctor">
+                Dr. Gupta (MBBS)
+            </div>
+
+            <div>
+                OPD Consultation Prescription
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>Date:</strong> ${today}<br>
+            <strong>Patient:</strong> ${patientName}<br>
+            <strong>Patient ID:</strong> ${rxData.patientId}
+        </div>
+
+        <div class="diagnosis">
+            <strong>Diagnosis:</strong><br>
+            ${rxData.diagnosis}
+        </div>
+<div style="margin-top:15px;">
+    <strong>Investigations / Diagnostic Tests:</strong><br>
+    ${rxData.diagnostic_tests || 'Not Advised'}
+</div>
+        <h3 style="margin-top:25px;">Prescription</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Medicine</th>
+                    <th>Qty</th>
+                    <th>Dosage</th>
+                    <th>Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${medicineRows}
+            </tbody>
+        </table>
+
+        <div style="margin-top:20px;">
+            <strong>SOS:</strong>
+            ${rxData.is_sos ? 'YES' : 'NO'}
+        </div>
+
+        <div class="footer">
+
+            <div class="sign">
+                <div class="sign-line"></div>
+                Doctor Signature
+            </div>
+
+        </div>
+
+    </body>
+    </html>
+    `);
+
+    printWindow.document.close();
+
+    setTimeout(() => {
+        printWindow.print();
+    }, 500);
+}
+function printOldPrescription(item) {
+
+    let medicinesHtml = '';
+
+    if (item.medicines) {
+
+        let meds = item.medicines;
+
+        if (typeof meds === 'string') {
+            try {
+                meds = JSON.parse(meds);
+            } catch {
+                meds = [];
+            }
+        }
+
+        if (Array.isArray(meds)) {
+            meds.forEach((m, i) => {
+                medicinesHtml += `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${m.medicine_name || m.name || ''}</td>
+                    <td>${m.quantity || m.qty || ''}</td>
+                    <td>${m.dosage || ''}</td>
+                    <td>${m.days || ''}</td>
+                </tr>
+                `;
+            });
+        }
+    }
+
+    const win = window.open('', '_blank');
+
+    win.document.write(`
+    <html>
+    <head>
+        <title>Prescription</title>
+
+        <style>
+            body{
+                font-family:Arial;
+                padding:30px;
+            }
+
+            .header{
+                text-align:center;
+                border-bottom:2px solid #000;
+                padding-bottom:10px;
+            }
+
+            table{
+                width:100%;
+                border-collapse:collapse;
+                margin-top:15px;
+            }
+
+            table th, table td{
+                border:1px solid #000;
+                padding:8px;
+            }
+
+            .signature{
+                margin-top:80px;
+                text-align:right;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="header">
+            <h2>GUPTA CLINIC</h2>
+            <h4>Dr. Gupta (MBBS)</h4>
+        </div>
+
+        <p><strong>Date:</strong> ${
+            new Date(item.date_recorded).toLocaleDateString('en-IN')
+        }</p>
+
+        <p><strong>Diagnosis:</strong> ${item.diagnosis || '-'}</p>
+<p>
+    <strong>Diagnostic Tests:</strong>
+    <br>
+    ${item.diagnostic_tests || 'Not Advised'}
+</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Medicine</th>
+                    <th>Qty</th>
+                    <th>Dosage</th>
+                    <th>Days</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                ${medicinesHtml}
+            </tbody>
+        </table>
+
+        <br>
+
+        <strong>SOS:</strong>
+        ${item.is_sos ? 'YES' : 'NO'}
+
+        <div class="signature">
+            <br><br><br>
+            ______________________
+            <br>
+            Doctor Signature
+        </div>
+
+    </body>
+    </html>
+    `);
+
+    win.document.close();
+
+    setTimeout(() => {
+        win.print();
+    }, 500);
+}
+function addCharge(type) {
+
+    const exists = chargeCart.find(c => c.type === type);
+
+    if (exists) {
+        alert("Charge already added!");
+        return;
+    }
+
+    if (type === 'opd') {
+        chargeCart.push({
+            type: 'opd',
+            name: 'OPD Charges'
+        });
+    }
+
+    if (type === 'emergency') {
+        chargeCart.push({
+            type: 'emergency',
+            name: 'Emergency Charges'
+        });
+    }
+
+    renderCharges();
+}
+
+function renderCharges() {
+
+    const div = document.getElementById('charge_list');
+
+    if (chargeCart.length === 0) {
+        div.innerHTML = '';
+        return;
+    }
+
+    let html = '<ul class="mb-0">';
+
+    chargeCart.forEach((c, index) => {
+
+        html += `
+            <li>
+                ${c.name}
+                <button
+                    type="button"
+                    class="btn btn-link btn-sm text-danger"
+                    onclick="removeCharge(${index})">
+                    Remove
+                </button>
+            </li>
+        `;
+    });
+
+    html += '</ul>';
+
+    div.innerHTML = html;
+}
+
+function removeCharge(index) {
+    chargeCart.splice(index, 1);
+    renderCharges();
+}
+function selectMedicine(medicineName) {
+
+    document.getElementById('med_name').value = medicineName;
+
+    const modal =
+        bootstrap.Modal.getInstance(
+            document.getElementById('pharmacyStockModal')
+        );
+
+    if (modal) {
+        modal.hide();
+    }
+
+    document.getElementById('med_qty').focus();
+}
+    </script>
+</body>
+</html>

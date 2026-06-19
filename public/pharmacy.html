@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GUPTA CLINIC | Pharmacy Counter Desk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom {
+            background-color: #1a1d20;
+            padding: 12px 20px;
+        }
+        .btn-stock-yellow {
+            background-color: #ffc107;
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+        }
+        .btn-stock-yellow:hover { background-color: #e0a800; color: #000; }
+        .card-header-custom { background-color: #0d6efd; color: white; }
+        .btn-fetch-blue { background-color: #0d6efd; color: white; font-weight: 500; }
+        .btn-fetch-blue:hover { background-color: #0b5ed7; }
+        .metadata-title-bar {
+            background-color: #0dcaf0;
+            color: #212529;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .patient-badge-title { font-weight: 600; color: #495057; }
+        .table-responsive { background: white; border-radius: 8px; }
+        .pharmacist-badge {
+            background-color: #1a1d20;
+            color: white;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .btn-dispense-green { background-color: #198754; color: white; font-weight: 500; }
+        .btn-dispense-green:hover { background-color: #157347; }
+        .d-none { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#"><span class="text-danger">💊</span> GUPTA CLINIC | Pharmacy Counter Desk</a>
+            <div class="d-flex gap-2">
+                <button class="btn-stock-yellow btn-sm" id="viewStockBtn" data-bs-toggle="modal" data-bs-target="#justViewStockModal">
+    📦 View Available Medicine Stock
+</button>
+<button class="btn btn-danger btn-sm px-3" onclick="handleSystemLogout()"><i class="fa-solid fa-lock me-1"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 my-4">
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary btn-sm px-3 fw-bold" id="tabDispenseCounter"><i class="fa-solid fa-box me-1"></i> Dispense Counter</button>
+            <button class="btn btn-outline-primary btn-sm px-3 fw-bold" id="tabDispenseLogs"><i class="fa-solid fa-calendar-days me-1"></i> Patient Dispensation Logs</button>
+            <button class="btn btn-outline-primary btn-sm px-3 fw-bold" id="tabSupplierReports"><i class="fa-solid fa-file-contract me-1"></i> Supplier Order Reports</button>
+            <button class="btn btn-outline-primary btn-sm px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#supplierInwardModal"><i class="fa-solid fa-truck-field me-1"></i> Supplier Inward Entry</button>
+        </div>
+
+        <div id="sectionDispenseCounter" class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header card-header-custom py-3">
+                        <h5 class="card-title mb-0 fs-6 fw-bold"><i class="fa-solid fa-magnifying-glass me-2"></i>Search Prescription</h5>
+                    </div>
+                    <div class="card-body border">
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-id-card"></i></span>
+                            <input type="text" id="patientSearchInput" class="form-control" placeholder="Enter Token / Patient ID">
+                            <button class="btn btn-fetch-blue" id="searchPatientBtn" type="button">Search</button>
+                        </div>
+                        <div class="metadata-title-bar"><i class="fa-solid fa-user-tag me-1"></i> Patient Profile Metadata</div>
+                        <div class="mb-2"><span class="patient-badge-title">Patient ID:</span> <span id="lblPatientId" class="text-secondary fw-bold">--</span></div>
+                        <div class="mb-2"><span class="patient-badge-title">Patient Name:</span> <span id="lblPatientName" class="text-dark fw-bold">--</span></div>
+                        <div class="mb-2"><span class="patient-badge-title">Age / Gender:</span> <span id="lblAgeGender" class="text-secondary">--</span></div>
+                        <div class="mb-2"><span class="patient-badge-title">Consultant:</span> <span id="lblDoctor" class="text-primary fw-bold">--</span></div>
+                        <div class="mb-2"><span class="patient-badge-title">Visit Date:</span> <span id="lblVisitDate" class="text-secondary">--</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border d-flex justify-content-between align-items-center py-2">
+                        <h5 class="card-title mb-0 text-primary fw-bold fs-6"><i class="fa-solid fa-capsules me-2"></i>Active Prescription Items Grid</h5>
+                        <span class="pharmacist-badge">Pharmacist: Counter Active</span>
+                    </div>
+                    <div class="card-body p-0 border border-top-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light border-bottom">
+                                    <tr>
+                                        <th class="ps-3">Medicine Name</th>
+                                        <th class="text-center">Prescribed Qty</th>
+                                        <th style="width: 120px;">Dispense Qty</th>
+                                        <th>Dosage & Duration</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prescriptionTableBody">
+                                    <tr><td colspan="5" class="text-center text-muted py-5"><i class="fa-solid fa-folder-open display-6 d-block mb-2 text-black-50"></i>कृपया मरीज की ID दर्ज करके सर्च बटन दबाएं।</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sectionDispenseLogs" class="row d-none">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 fs-6 fw-bold"><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i>Daily Medicine Dispensation Logs</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="date" id="logFilterDate" class="form-control form-control-sm" style="max-width: 180px;">
+                            <button class="btn btn-warning btn-sm fw-bold px-3" id="btnFetchLogs">Get Report</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 border">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th class="ps-3">Patient ID</th>
+                                        <th>Patient Name</th>
+                                        <th>Dispensed Medicine Name</th>
+                                        <th class="text-center">Qty Dispensed</th>
+                                        <th>Dosage/Instructions</th>
+                                        <th class="text-center">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logTableBody">
+                                    <tr><td colspan="6" class="text-center text-muted py-5">तारीख चुनकर 'Get Report' बटन पर क्लिक करें।</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sectionSupplierReports" class="row d-none">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 fs-6 fw-bold"><i class="fa-solid fa-receipt text-warning me-2"></i>Supplier Inward Ledger Book (Audit Reports)</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="date" id="supplierReportDate" class="form-control form-control-sm" style="max-width: 180px;">
+                            <button class="btn btn-light btn-sm fw-bold text-primary px-3" id="btnFetchSupplierReports"><i class="fa-solid fa-filter"></i> Filter Ledger</button>
+                            <button class="btn btn-danger btn-sm fw-bold px-3" id="btnDownloadSupplierReportPDF"><i class="fa-solid fa-file-pdf"></i> Download Report PDF</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 border">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle mb-0" id="supplierLedgerReportTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="ps-3">Date</th>
+                                        <th>Supplier Name</th>
+                                        <th>Medicine Name</th>
+                                        <th>Batch No.</th>
+                                        <th class="text-end">Price/Unit</th>
+                                        <th class="text-center">Qty Recd</th>
+                                        <th class="text-end">Total Amt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supplierReportTableBody">
+                                    <tr><td colspan="7" class="text-center text-muted py-5">फिल्टर बटन दबाकर सप्लायर का डेटा लोड करें।</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="justViewStockModal" tabindex="-1" aria-labelledby="justViewStockModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-3">
+                    <h5 class="modal-title fs-6" id="justViewStockModalLabel"><i class="fa-solid fa-boxes-stacked text-warning me-2"></i>Live Pharmacy Counter Stock Balances</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-secondary small fw-bold">यह सूची डेटाबेस से लाइव काउंटर स्टॉक मात्रा दर्शाती है।</span>
+                        <button class="btn btn-primary btn-sm fw-bold" id="refreshJustStockBtn"><i class="fa-solid fa-rotate"></i> Refresh List</button>
+                    </div>
+                    <div class="table-responsive border" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-primary sticky-top">
+                                <tr>
+                                    <th class="ps-3">Medicine Nomenclature</th>
+                                    <th class="text-center" style="width: 200px;">Current Available Stock</th>
+                                    <th class="text-center" style="width: 150px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="justStockTableBody">
+                                <tr><td colspan="3" class="text-center py-4 text-muted">Stock loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close Window</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="supplierInwardModal" tabindex="-1" aria-labelledby="supplierInwardModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header navbar-custom text-white py-3">
+                    <h5 class="modal-title fs-6" id="supplierInwardModalLabel"><i class="fa-solid fa-truck-moving text-warning me-2"></i>Supplier Stock Inward Voucher Desk</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="row">
+                        <div class="col-md-5 border-end">
+                            <h6 class="text-primary border-bottom pb-2 fw-bold"><i class="fa-solid fa-file-invoice-dollar me-1"></i> Supplier Invoice Fields</h6>
+                            <form id="inventoryManageForm" class="row g-2 mt-1">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Medicine Name</label>
+                                    <input type="text" id="txtInvMedName" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Supplier Agency Name</label>
+                                    <input type="text" id="txtSupplierName" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Batch No.</label>
+                                    <input type="text" id="txtBatchNo" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Price per Unit (₹)</label>
+                                    <input type="number" id="numPriceUnit" class="form-control form-control-sm" step="0.01" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Qty Ordered</label>
+                                    <input type="number" id="numQtyOrdered" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-secondary mb-0">Qty Received</label>
+                                    <input type="number" id="numQtyReceived" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-md-12 mt-3">
+                                    <div class="p-2 bg-light border rounded d-flex justify-content-between align-items-center">
+                                        <span class="small fw-bold text-dark">Estimated Net Amount:</span>
+                                        <span class="fs-6 fw-bold text-success" id="lblNetCalculatedAmount">₹ 0.00</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mt-2" id="formActionContainer">
+                                    <button type="submit" class="btn btn-success btn-sm w-100 fw-bold py-2"><i class="fa-solid fa-circle-plus me-1"></i> Submit Supplier Bill & Add Stock</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="col-md-7">
+                            <h6 class="text-success border-bottom pb-2 fw-bold d-flex justify-content-between">
+                                <span><i class="fa-solid fa-cubes me-1"></i> Quick Select From Stock Room</span>
+                                <button class="btn btn-link btn-sm p-0 text-decoration-none fw-bold text-primary" id="refreshInwardStockListBtn"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                            </h6>
+                            <div style="max-height: 340px; overflow-y: auto;">
+                                <table class="table table-sm table-striped table-hover align-middle mb-0" style="font-size:0.9rem;">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th class="ps-2">Medicine Nomenclature</th>
+                                            <th class="text-center" style="width: 140px;">Current Stock</th>
+                                            <th class="text-center" style="width: 80px;">Select</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inwardAssistantStockTableBody">
+                                        <tr><td colspan="3" class="text-center py-3 text-muted">Stock loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close Window</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function handleSystemLogout() {
+    if(confirm("क्या आप गुप्ता क्लिनिक फार्मेसी डेस्क से लॉगआउट करना चाहते हैं?")) {
+        // अगर आपका लॉगिन पेज index.html है तो यह सीधे वहां भेज देगा
+        window.location.href = "index.html"; 
+    }
+}
+        // Set Default Dates to Today
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('logFilterDate').value = todayStr;
+        document.getElementById('supplierReportDate').value = todayStr;
+
+        // Global variables to store last voucher for receipt download
+        let lastVoucherData = null;
+        let globalSupplierLedgerRows = [];
+
+        // Live Amount Calculation Engine
+        const numPrice = document.getElementById('numPriceUnit');
+        const numQtyRec = document.getElementById('numQtyReceived');
+        const lblAmount = document.getElementById('lblNetCalculatedAmount');
+        
+        function calculateLiveAmount() {
+            const p = parseFloat(numPrice.value || 0);
+            const q = parseInt(numQtyRec.value || 0);
+            lblAmount.innerText = `₹ ${(p * q).toFixed(2)}`;
+        }
+        numPrice.addEventListener('input', calculateLiveAmount);
+        numQtyRec.addEventListener('input', calculateLiveAmount);
+
+        // Core UI Navigation Controller
+        const tabs = {
+            counter: document.getElementById('tabDispenseCounter'),
+            logs: document.getElementById('tabDispenseLogs'),
+            supplier: document.getElementById('tabSupplierReports')
+        };
+        const sections = {
+            counter: document.getElementById('sectionDispenseCounter'),
+            logs: document.getElementById('sectionDispenseLogs'),
+            supplier: document.getElementById('sectionSupplierReports')
+        };
+
+        function switchTab(activeKey) {
+            Object.keys(tabs).forEach(key => {
+                if (key === activeKey) {
+                    tabs[key].className = "btn btn-primary btn-sm px-3 fw-bold";
+                    sections[key].classList.remove('d-none');
+                } else {
+                    tabs[key].className = "btn btn-outline-primary btn-sm px-3 fw-bold";
+                    sections[key].classList.add('d-none');
+                }
+            });
+        }
+
+        tabs.counter.addEventListener('click', () => switchTab('counter'));
+        tabs.logs.addEventListener('click', () => { switchTab('logs'); executeLogReportFetch(); });
+        tabs.supplier.addEventListener('click', () => { switchTab('supplier'); executeSupplierLedgerFetch(); });
+
+        // Event Triggers
+        document.getElementById('searchPatientBtn').addEventListener('click', executePrescriptionFetch);
+        document.getElementById('viewStockBtn').addEventListener('click', loadJustViewStockMatrix);
+        document.getElementById('refreshJustStockBtn').addEventListener('click', loadJustViewStockMatrix);
+        document.getElementById('refreshInwardStockListBtn').addEventListener('click', loadInwardAssistantStock);
+        document.getElementById('inventoryManageForm').addEventListener('submit', handleSupplierSubmission);
+        document.getElementById('btnFetchLogs').addEventListener('click', executeLogReportFetch);
+        document.getElementById('btnFetchSupplierReports').addEventListener('click', executeSupplierLedgerFetch);
+        document.getElementById('btnDownloadSupplierReportPDF').addEventListener('click', downloadSupplierReportPDF);
+        
+        document.querySelector('[data-bs-target="#supplierInwardModal"]').addEventListener('click', () => {
+            loadInwardAssistantStock();
+            // Reset print action buttons from form if any
+            document.getElementById('formActionContainer').innerHTML = `<button type="submit" class="btn btn-success btn-sm w-100 fw-bold py-2"><i class="fa-solid fa-circle-plus me-1"></i> Submit Supplier Bill & Add Stock</button>`;
+        });
+
+        // -----------------------------------------------------------------
+        // NEW FEATURE: DOWNLOAD SUPPLIER INWARD STOCK RECEIPT (SINGLE)
+        // -----------------------------------------------------------------
+        function downloadSupplierVoucherReceipt() {
+            if(!lastVoucherData) { alert("कोई वाउचर डेटा नहीं मिला!"); return; }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a5' }); // Compact A5 Receipt
+
+            // Custom Elegant Header Styling
+            doc.setFillColor(26, 29, 32); 
+            doc.rect(0, 0, 148, 22, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text("GUPTA CLINIC & PHARMACY", 12, 10);
+            doc.setFontSize(8);
+            doc.setFont('Helvetica', 'normal');
+            doc.text("Inward Stock Delivery Acknowledgement Receipt", 12, 15);
+
+            // Invoice Metadata Section
+            doc.setTextColor(50, 50, 50);
+            doc.setFontSize(9);
+            doc.setFont('Helvetica', 'bold');
+            doc.text("SUPPLIER AGENCY:", 10, 32);
+            doc.setFont('Helvetica', 'normal');
+            doc.text(lastVoucherData.supplier_name.toUpperCase(), 45, 32);
+
+            doc.setFont('Helvetica', 'bold');
+            doc.text("RECEIVED DATE:", 10, 38);
+            doc.setFont('Helvetica', 'normal');
+            doc.text(new Date().toLocaleDateString('en-IN') + " (Live Sync)", 45, 38);
+
+            doc.setFont('Helvetica', 'bold');
+            doc.text("BATCH ASSIGNED:", 10, 44);
+            doc.setFont('Helvetica', 'normal');
+            doc.text(lastVoucherData.batch_no, 45, 44);
+
+            doc.setDrawColor(200, 200, 200);
+            doc.line(10, 48, 138, 48);
+
+            // Item Details Matrix Table
+            doc.autoTable({
+                startY: 52,
+                theme: 'striped',
+                headStyles: { fillColor: [13, 110, 253], textColor: [255, 255, 255], fontStyle: 'bold' },
+                head: [['Item Description', 'Ordered', 'Received', 'Rate (₹)', 'Net Amt (₹)']],
+                body: [[
+                    lastVoucherData.medicine_name,
+                    lastVoucherData.qty_ordered || '-',
+                    lastVoucherData.qty_received,
+                    `Rs. ${parseFloat(lastVoucherData.price_per_unit).toFixed(2)}`,
+                    `Rs. ${lastVoucherData.total_amount.toFixed(2)}`
+                ]],
+                margin: { left: 10, right: 10 }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 12;
+            doc.setFont('Helvetica', 'bold');
+            doc.text(`GRAND TOTAL AMOUNT:  Rs. ${lastVoucherData.total_amount.toFixed(2)}`, 65, finalY);
+
+            doc.setFontSize(8);
+            doc.setFont('Helvetica', 'italic');
+            doc.text("Authorized Signature (Pharmacy In-Charge)", 80, finalY + 25);
+            doc.line(80, finalY + 22, 135, finalY + 22);
+
+            doc.save(`Receipt_${lastVoucherData.batch_no}.pdf`);
+        }
+
+        // --- HANDLER FOR SUPPLIER VOUCHER SUBMISSION ---
+        function handleSupplierSubmission(e) {
+            e.preventDefault();
+            
+            const payload = {
+                medicine_name: document.getElementById('txtInvMedName').value.trim(),
+                supplier_name: document.getElementById('txtSupplierName').value.trim(),
+                batch_no: document.getElementById('txtBatchNo').value.trim(),
+                price_per_unit: parseFloat(document.getElementById('numPriceUnit').value),
+                qty_ordered: parseInt(document.getElementById('numQtyOrdered').value || 0),
+                qty_received: parseInt(document.getElementById('numQtyReceived').value)
+            };
+
+            payload.total_amount = payload.price_per_unit * payload.qty_received;
+
+            fetch('/api/pharmacy/update-inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    alert(data.message);
+                    lastVoucherData = payload; // save data locally
+                    
+                    // Dynamic Transformation of Action Form Container to reveal a Print Trigger
+                    document.getElementById('formActionContainer').innerHTML = `
+                        <div class="alert alert-success text-center py-2 mb-2 small fw-bold">स्टॉक रूम सिंक हो गया!</div>
+                        <button type="button" class="btn btn-warning btn-sm w-100 fw-bold py-2 mb-2" onclick="downloadSupplierVoucherReceipt()">
+                            <i class="fa-solid fa-print"></i> Download Supplier Print Receipt
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="resetVoucherFormState()">
+                            <i class="fa-solid fa-plus"></i> Make Another Entry
+                        </button>
+                    `;
+                    loadInwardAssistantStock();
+                } else {
+                    alert("विफलता: " + data.message);
+                }
+            }).catch(err => alert("सर्वर सिंक एरर: " + err.message));
+        }
+
+        function resetVoucherFormState() {
+            document.getElementById('inventoryManageForm').reset();
+            document.getElementById('lblNetCalculatedAmount').innerText = "₹ 0.00";
+            document.getElementById('formActionContainer').innerHTML = `<button type="submit" class="btn btn-success btn-sm w-100 fw-bold py-2"><i class="fa-solid fa-circle-plus me-1"></i> Submit Supplier Bill & Add Stock</button>`;
+        }
+
+        // -----------------------------------------------------------------
+        // NEW FEATURE: FETCH & DOWNLOAD EXCEL/PDF SUPPLIER ORDER REPORTS
+        // -----------------------------------------------------------------
+        function executeSupplierLedgerFetch() {
+            const dateVal = document.getElementById('supplierReportDate').value;
+            const tbody = document.getElementById('supplierReportTableBody');
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Loading Ledger Book...</td></tr>`;
+
+            // Hit the dynamic log endpoint on server
+            fetch(`/api/pharmacy/supplier-ledger-report?date=${dateVal}`)
+                .then(res => res.json())
+                .then(data => {
+                    tbody.innerHTML = "";
+                    if (!data.success || !data.ledger || data.ledger.length === 0) {
+                        globalSupplierLedgerRows = [];
+                        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger fw-bold py-4">इस तारीख में कोई सप्लायर परचेज एंट्री नहीं मिली!</td></tr>`;
+                        return;
+                    }
+                    globalSupplierLedgerRows = data.ledger;
+                    data.ledger.forEach(row => {
+                        const recDate = row.received_date ? new Date(row.received_date).toLocaleDateString('en-IN') : dateVal;
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="ps-3 small fw-bold">${recDate}</td>
+                                <td><strong>${row.supplier_name}</strong></td>
+                                <td class="text-primary fw-bold">💊 ${row.medicine_name}</td>
+                                <td><span class="badge bg-light text-dark border">${row.batch_no}</span></td>
+                                <td class="text-end">₹ ${parseFloat(row.price_per_unit).toFixed(2)}</td>
+                                <td class="text-center fw-bold">${row.qty_received}</td>
+                                <td class="text-end text-success fw-bold">₹ ${parseFloat(row.total_amount).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                }).catch(err => { tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-2">डेटाबेस एरर: फ़ेच विफल!</td></tr>`; });
+        }
+
+        function downloadSupplierReportPDF() {
+            if(globalSupplierLedgerRows.length === 0) { alert("डाउनलोड करने के लिए कोई रिकॉर्ड उपलब्ध नहीं है!"); return; }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const dateStr = document.getElementById('supplierReportDate').value;
+
+            // Corporate Style Report Top Bar
+            doc.setFillColor(13, 110, 253);
+            doc.rect(0, 0, 210, 25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text("GUPTA CLINIC | PHARMACY AUDIT ROOM", 14, 11);
+            doc.setFontSize(10);
+            doc.setFont('Helvetica', 'normal');
+            doc.text(`Supplier Stock Inward Ledger Audit Report — Filter Date: ${dateStr}`, 14, 18);
+
+            // Formulate Rows For AutoTable
+            const bodyData = globalSupplierLedgerRows.map(r => [
+                r.received_date ? new Date(r.received_date).toLocaleDateString('en-IN') : dateStr,
+                r.supplier_name.toUpperCase(),
+                r.medicine_name,
+                r.batch_no,
+                `Rs. ${parseFloat(r.price_per_unit).toFixed(2)}`,
+                r.qty_received,
+                `Rs. ${parseFloat(r.total_amount).toFixed(2)}`
+            ]);
+
+            doc.autoTable({
+                startY: 32,
+                theme: 'grid',
+                headStyles: { fillColor: [33, 37, 41], textColor: [255, 255, 255] },
+                head: [['Date', 'Supplier Name', 'Medicine Nomenclature', 'Batch No', 'Rate', 'Qty Recd', 'Total Amount']],
+                body: bodyData,
+                margin: { left: 14, right: 14 }
+            });
+
+            doc.save(`Supplier_Inward_Report_${dateStr}.pdf`);
+        }
+        function bindGridActionButtons() {
+    document.querySelectorAll('.action-dispense-trigger').forEach(btn => {
+
+        btn.addEventListener('click', function () {
+
+            const row = this.closest('tr');
+
+            const itemId = this.dataset.itemId;
+            const medName = this.dataset.medName;
+            const patientId = this.dataset.patientId;
+
+            const qty =
+                row.querySelector('.dispense-qty-input').value;
+
+            fetch('/api/pharmacy/dispense', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    medicine_name: medName,
+                    qty_to_subtract: parseInt(qty),
+                    patient_id: parseInt(patientId),
+                    item_id: parseInt(itemId)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Medicine Dispensed Successfully");
+                    row.remove();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Dispense Error");
+            });
+
+        });
+
+    });
+}
+
+        // --- OLD DISPENSATION AND CORE COUNTER FUNCTIONS (UNCHANGED) ---
+ async function executePrescriptionFetch() {
+    const patientIdInput = document.getElementById('patientSearchInput').value.trim();
+
+    if (!patientIdInput) {
+        alert("कृपया वैध Patient ID भरें!");
+        return;
+    }
+
+    resetMetadataFields();
+
+    try {
+
+        // Prescription Fetch
+        const prescriptionRes =
+            await fetch(`/api/pharmacy/prescription/${patientIdInput}`);
+
+        const prescriptionData =
+            await prescriptionRes.json();
+
+        if (!prescriptionData.success) {
+            alert(prescriptionData.message);
+            return;
+        }
+
+        // Stock Fetch
+        const stockRes = await fetch('/api/pharmacy-stock');
+        const stockData = await stockRes.json();
+
+        // Stock Map
+        const stockMap = {};
+
+        stockData.forEach(med => {
+            stockMap[
+                med.medicine_name.trim().toLowerCase()
+            ] = parseInt(med.current_stock || 0);
+        });
+
+        // Patient Metadata
+        document.getElementById('lblPatientId').innerText =
+            prescriptionData.patient_id || '--';
+
+        document.getElementById('lblPatientName').innerText =
+            prescriptionData.patient_name || '--';
+
+        document.getElementById('lblAgeGender').innerText =
+            `${prescriptionData.age || '--'} Yrs / ${prescriptionData.gender || '--'}`;
+
+        document.getElementById('lblDoctor').innerText =
+            prescriptionData.doctor_name || 'Dr. Gupta';
+
+        document.getElementById('lblVisitDate').innerText =
+            prescriptionData.appointment_date
+                ? new Date(
+                    prescriptionData.appointment_date
+                  ).toLocaleDateString('en-IN')
+                : 'Today';
+
+        const tbody =
+            document.getElementById('prescriptionTableBody');
+
+        tbody.innerHTML = "";
+
+        // Sirf stock wali medicines dikhao
+        const availableItems =
+            prescriptionData.items.filter(item => {
+
+                const stockQty =
+                    stockMap[
+                        item.medicine_name.trim().toLowerCase()
+                    ] || 0;
+
+                return stockQty > 0;
+            });
+
+        if (availableItems.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5"
+                        class="text-center text-danger fw-bold py-5">
+                        Gupta Clinic Stock me koi prescribed medicine available nahi hai.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        availableItems.forEach(item => {
+
+            const stockQty =
+                stockMap[
+                    item.medicine_name.trim().toLowerCase()
+                ];
+
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td class="fw-bold text-secondary ps-3">
+                    💊 ${item.medicine_name}
+                    <br>
+                    <small class="text-success">
+                        Available Stock: ${stockQty}
+                    </small>
+                </td>
+
+                <td class="text-center">
+                    <span class="badge bg-light text-dark border px-3 py-2">
+                        ${item.quantity}
+                    </span>
+                </td>
+
+                <td>
+                    <input type="number"
+                           class="form-control form-control-sm dispense-qty-input text-center fw-bold"
+                           value="${Math.min(item.quantity, stockQty)}"
+                           min="1"
+                           max="${stockQty}">
+                </td>
+
+               <td>
+    <span class="fw-semibold">
+        ${item.dosage || '-'}
+    </span>
+    <span class="badge bg-info text-dark ms-2">
+        ${item.days || 0} Days
+    </span>
+</td>
+                <td class="text-center">
+                    <button
+                        class="btn btn-dispense-green btn-sm px-3 action-dispense-trigger"
+                        data-item-id="${item.item_id}"
+                        data-med-name="${item.medicine_name}"
+                        data-patient-id="${prescriptionData.patient_id}">
+                        Dispense Item
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+
+        bindGridActionButtons();
+
+    } catch (err) {
+    console.error("Prescription Error:", err);
+    alert("Prescription Fetch Error: " + err.message);
+}
+}
+
+        function loadJustViewStockMatrix() {
+            const body = document.getElementById('justStockTableBody');
+            body.innerHTML = `<tr><td colspan="3" class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin me-1"></i> Live data synchronizing...</td></tr>`;
+            fetch('/api/pharmacy-stock').then(res => res.json()).then(data => {
+                body.innerHTML = "";
+                data.forEach(med => {
+                    const isLow = parseInt(med.current_stock) <= 10;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="ps-3"><strong>💊 ${med.medicine_name}</strong></td>
+                        <td class="text-center"><span class="badge ${isLow ? 'bg-danger' : 'bg-dark'} px-4 py-2 fs-7">${med.current_stock} Units</span></td>
+                        <td class="text-center">${isLow ? '<span class="text-danger fw-bold small"><i class="fa-solid fa-triangle-exclamation"></i> Low Stock!</span>' : '<span class="text-success small fw-bold"><i class="fa-solid fa-circle-check"></i> Sufficient</span>'}</td>
+                    `;
+                    body.appendChild(tr);
+                });
+            });
+        }
+
+        function loadInwardAssistantStock() {
+            const assistantBody = document.getElementById('inwardAssistantStockTableBody');
+            assistantBody.innerHTML = `<tr><td colspan="3" class="text-center py-2 text-muted">Syncing...</td></tr>`;
+            fetch('/api/pharmacy-stock').then(res => res.json()).then(data => {
+                assistantBody.innerHTML = "";
+                data.forEach(med => {
+                    const isLow = parseInt(med.current_stock) <= 10;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="ps-2"><strong>${med.medicine_name}</strong></td>
+                        <td class="text-center"><span class="badge ${isLow ? 'bg-danger' : 'bg-secondary'} px-3 py-1">${med.current_stock}</span></td>
+                        <td class="text-center"><button class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" onclick="selectForInward('${med.medicine_name}')"><i class="fa-solid fa-hand-pointer"></i> Select</button></td>
+                    `;
+                    assistantBody.appendChild(tr);
+                });
+            });
+        }
+
+        window.selectForInward = function(name) {
+            document.getElementById('txtInvMedName').value = name;
+            document.getElementById('txtSupplierName').focus();
+        };
+
+        function executeLogReportFetch() {
+            const selectedDate = document.getElementById('logFilterDate').value;
+            fetch(`/api/pharmacy/dispense-log?date=${selectedDate}`).then(res => res.json()).then(data => {
+                const logTbody = document.getElementById('logTableBody');
+                logTbody.innerHTML = "";
+                if(!data.log || data.log.length === 0) { logTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">कोई डेटा नहीं मिला!</td></tr>`; return; }
+                data.log.forEach(row => {
+                    logTbody.innerHTML += `<tr><td class="ps-3">${row.patient_id}</td><td><strong>${row.patient_name}</strong></td><td class="text-primary">💊 ${row.medicine_name}</td><td class="text-center">${row.quantity}</td><td>${row.dosage || ''}</td><td class="text-center">${row.dispense_time}</td></tr>`;
+                });
+            });
+        }
+
+        function resetMetadataFields() {
+            document.getElementById('lblPatientId').innerText = "--"; document.getElementById('lblPatientName').innerText = "--";
+            document.getElementById('lblAgeGender').innerText = "--"; document.getElementById('lblDoctor').innerText = "--";
+            document.getElementById('lblVisitDate').innerText = "--";
+        }
+    </script>
+</body>
+</html>
