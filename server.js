@@ -28,8 +28,10 @@ const upload = multer({ storage });
 const isProduction = process.env.NODE_ENV === 'production';
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // Render mein ye URL dalenge
-    ssl: isProduction ? { rejectUnauthorized: false } : false
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Yeh line ab har haal mein chalegi
+    }
 });
 
 // Middlewares
