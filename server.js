@@ -33,22 +33,7 @@ const pool = new Pool({
         rejectUnauthorized: false // Yeh line ab har haal mein chalegi
     }
 });
-// Database initialize hone ke thik niche is code ko daalein
-pool.query(`
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public'
-`, (err, res) => {
-    if (err) {
-        console.error('Database tables fetch nahi ho payi ❌:', err.stack);
-    } else {
-        console.log('--- Aapke Database ki Tables ki List 🔥 ---');
-        res.rows.forEach((row, index) => {
-            console.log(`${index + 1}. ${row.table_name}`);
-        });
-        console.log('------------------------------------------');
-    }
-});
+
 
 // Middlewares
 app.use(bodyParser.json());
