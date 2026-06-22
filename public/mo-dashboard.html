@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -234,6 +235,11 @@
                 <li id="menuRoster" class="active"><a onclick="switchTab('roster')"><i class="fa-solid fa-calendar-check"></i> Roster Mgmt</a></li>
                 <li id="menuStaff"><a onclick="switchTab('staff')"><i class="fa-solid fa-users-cog"></i> Staff Logins</a></li>
                 <li id="menuNotice"><a onclick="switchTab('notice')"><i class="fa-solid fa-bullhorn"></i> Notice Board</a></li>
+                <li id="menuDashboard">
+    <a onclick="switchTab('dashboard')">
+        <i class="fa-solid fa-chart-line"></i> Dashboard
+    </a>
+</li>
             </ul>
         </div>
         <div class="logout-section">
@@ -251,7 +257,57 @@
                 <span class="badge-header bg-blue"><i class="fa-solid fa-shield-halved"></i> Owner Access</span>
             </div>
         </div>
+<div id="panelDashboard" class="tab-panel">
 
+    <div class="card">
+        <h2>
+            <i class="fa-solid fa-chart-pie"></i>
+            Clinic Analytics Dashboard
+        </h2>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;">
+
+            <div class="card">
+                <h3>Total Patients</h3>
+                <h1 id="totalPatients">0</h1>
+            </div>
+
+            <div class="card">
+                <h3>Today's Patients</h3>
+                <h1 id="todayPatients">0</h1>
+            </div>
+
+            <div class="card">
+                <h3>Total Doctors</h3>
+                <h1 id="totalDoctors">0</h1>
+            </div>
+
+            <div class="card">
+                <h3>Today's Revenue</h3>
+                <h1>₹<span id="todayRevenue">0</span></h1>
+            </div>
+
+        </div>
+         <div class="card">
+        <h2>
+            <i class="fa-solid fa-user-doctor"></i>
+            Today's Patients Per Doctor
+        </h2>
+
+        <canvas id="doctorPatientsChart" height="100"></canvas>
+    </div>
+
+    </div>
+
+    <div class="card">
+        <h2>Patients Per Doctor</h2>
+
+        <div id="doctorChart">
+            Loading...
+        </div>
+    </div>
+
+</div>
         <div id="panelRoster" class="tab-panel active-panel">
             <div class="dashboard-grid">
                 <div class="left-pane">
@@ -504,7 +560,16 @@
                 document.getElementById('panelRoster').classList.add('active-panel');
                 document.getElementById('menuRoster').classList.add('active');
                 document.getElementById('dashboardTitle').textContent = "Medical Officer - Roster Desk";
-            } else if(tabName === 'staff') {
+            } 
+            else if(tabName === 'dashboard') {
+    document.getElementById('panelDashboard').classList.add('active-panel');
+    document.getElementById('menuDashboard').classList.add('active');
+
+    document.getElementById('dashboardTitle').textContent =
+        "Medical Officer - Analytics Dashboard";
+
+    loadDashboard();
+}else if(tabName === 'staff') {
                 document.getElementById('panelStaff').classList.add('active-panel');
                 document.getElementById('menuStaff').classList.add('active');
                 document.getElementById('dashboardTitle').textContent = "Medical Officer - Staff Identity Logs";
@@ -740,6 +805,53 @@ async function loadLiveNotices() {
                 alert('Error saving charges.');
             }
         }
+async function loadDashboard(){
+
+    const res = await fetch('/api/admin/dashboard');
+    const data = await res.json();
+
+    document.getElementById('totalPatients').textContent =
+        data.totalPatients;
+
+    document.getElementById('todayPatients').textContent =
+        data.todayPatients;
+
+    document.getElementById('totalDoctors').textContent =
+        data.totalDoctors;
+
+    document.getElementById('todayRevenue').textContent =
+        data.todayRevenue;
+
+    renderDoctorChart(data.doctorWise);
+}
+let doctorChart;
+
+function renderDoctorChart(rows){
+
+    const labels =
+        rows.map(x => x.staff_name);
+
+    const values =
+        rows.map(x => x.patient_count);
+
+    if(doctorChart){
+        doctorChart.destroy();
+    }
+
+    doctorChart = new Chart(
+        document.getElementById('doctorPatientsChart'),
+        {
+            type:'bar',
+            data:{
+                labels,
+                datasets:[{
+                    label:'Patients',
+                    data:values
+                }]
+            }
+        }
+    );
+}
     </script>
 </body>
 </html>
