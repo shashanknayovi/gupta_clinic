@@ -1192,7 +1192,8 @@ app.get('/api/patient/emr/:id', async (req, res) => {
         const pId = parseInt(req.params.id);
         const visits = await pool.query(`SELECT rx_id, diagnosis, date_recorded as visit_date, 'Dr. Gupta' as doctor_name FROM prescriptions WHERE patient_id = $1`, [pId]);
         const meds = await pool.query(`SELECT m.rx_id, m.medicine_name, m.dosage, m.days, m.quantity FROM prescription_items m JOIN prescriptions p ON m.rx_id = p.rx_id WHERE p.patient_id = $1`, [pId]);
-        const vitals = await pool.query(`SELECT vital_id, bp, pulse, temperature, weight, recorded_at as record_date FROM vitals WHERE patient_id = $1`, [pId]);
+        const vitals = await pool.query(`SELECT vital_id, bp, pulse, temperature, weight,spo2 recorded_at as record_date FROM vitals WHERE patient_id = $1 
+    ORDER BY recorded_at DESC`, [pId]); // ORDER BY se latest record upar aa jayega
         
         res.json({ visits: visits.rows, medicines: meds.rows, vitals: vitals.rows });
     } catch (err) {
@@ -1630,6 +1631,74 @@ app.get('/api/my-appointments/:patientId', async (req, res) => {
             error: err.message
         });
     }
+});
+app.get('/api/admin/dashboard', async (req,res)=>{
+
+    try{
+
+        const totalPatients =
+        await pool.query(`
+            SELECT COUNT(*) total
+            FROM patients
+        `);
+
+        const todayPatients =
+        await pool.query(`
+            SELECT COUNT(*) total
+            FROM patients
+            WHERE created_at::date = CURRENT_DATE
+        `);
+
+        const totalDoctors =
+        await pool.query(`
+            SELECT COUNT(*) total
+            FROM doctors
+        `);
+
+        const revenue =
+        await pool.query(`
+            SELECT COALESCE(SUM(total_amount),0) total
+            FROM bills
+            WHERE bill_date::date = CURRENT_DATE
+        `);
+
+        const doctorWise =
+        await pool.query(`
+            SELECT
+                d.staff_name,
+                COUNT(a.app_id) patient_count
+            FROM appointments a
+            JOIN doctors d
+                ON a.doctor_id=d.doctor_id
+            WHERE a.visit_date=CURRENT_DATE
+            GROUP BY d.staff_name
+            ORDER BY patient_count DESC
+        `);
+
+        res.json({
+            totalPatients:
+                totalPatients.rows[0].total,
+
+            todayPatients:
+                todayPatients.rows[0].total,
+
+            totalDoctors:
+                totalDoctors.rows[0].total,
+
+            todayRevenue:
+                revenue.rows[0].total,
+
+            doctorWise:
+                doctorWise.rows
+        });
+
+    }catch(err){
+        console.error(err);
+        res.status(500).json({
+            error:'Dashboard Error'
+        });
+    }
+
 });
 // =========================================================================
 // --- 9. START SERVER CONFIGURATION ---------------------------------------
