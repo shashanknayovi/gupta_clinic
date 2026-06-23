@@ -298,7 +298,13 @@ document.getElementById('otherCharges').value =
 
         // 4. Print karne aur status alert trigger karne ka standard control
 async function generateAndPrintReceipt() {
+// lblPatientId ke bajaye global variable ka use karein
+    const patientId = currentPatientId; 
 
+    if (!patientId) {
+        alert("Patient ID missing hai! Pehle patient search karein.");
+        return;
+    }
     const printBtn =
         document.querySelector('.btn-success.w-100.btn-lg');
 
